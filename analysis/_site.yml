@@ -12,7 +12,7 @@ navbar:
   right:
   - icon: fa-github
     text: Source code
-    href: https://github.com/shay-279/reproduce_lucas_wflow
+    href: https://github.com/cancer-genomics/reproduce_lucas_wflow
 output:
   workflowr::wflow_html:
     toc: yes
