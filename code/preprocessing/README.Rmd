@@ -1,0 +1,32 @@
+---
+title: "ML models evaluated"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: html_document
+---
+
+```{r message=FALSE, echo=FALSE}
+library(tidyverse)
+library(kableExtra)
+library(here)
+```
+
+
+First, the preprocess.sh script calls the following scripts which do the following:
+
+fastp.sh -- process fastq to fastp
+align.sh -- generate the bam files
+post_alignment.sh -- generate the bed files
+bed_to_granges.sh -- Converts bed files generated from the alignment and bedtools step into GRanges in R.
+gc_counts.sh -- Creates a table for the count of fragments for each GC strata. This distribution is used for GCcorrection at the fra gment level.
+bin_corrected.sh -- Create bin level data for each sample.
+
+Then, getZscores.sh, getCoverage.sh are run to generate the z-score and coverage features respectively.
+Finally, FeatureMatrix.sh generates the final feature matrix which can be used in downstream modeling.
+
+create-training-set.r and create-testing-set.r generate the full feature matrix, including clinical data, which are used to train and validate the models used in the paper.
+
+The following libraries must be installed from GitHub:
+PlasmaToolsNovaseq.hg19 for the target gc distribution and bins for novaseq reference samples (not used in paper)
+https://github.com/cancer-genomics/PlasmaToolsNovaseq.hg19
+PlasmaToolsHiseq.hg19 for the target gc distribution and bins for hiseq reference samples (used in paper)
+https://github.com/cancer-genomics/PlasmaToolsHiseq.hg19

@@ -1,0 +1,57 @@
+---
+title: "Distribution of DELFI scores by T stage and N stage"
+site: workflowr::wflow_site
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: html_document
+chunk_output_type: console
+---
+```{r caching, echo=FALSE}
+knitr::opts_chunk$set(autodep = TRUE)
+```
+
+
+```{r packages}
+library(readxl)
+library(ggplot2)
+library(here)
+```
+
+## Fig 4a,b (TNM staging and delfi)
+
+
+```{r fig4a,echo=FALSE, fig.width=12, fig.height=6,dev=c("png", "pdf")}
+TNM_stage_DELFI <- read_excel(here("data", "TNM_stage_DELFI_4a.xlsx"))
+a<-TNM_stage_DELFI
+
+##T stage
+
+b<-ggplot(a,aes(x=`T stage group`,y=score_seq))+geom_jitter(width=0.1, color="gray", height=0.01)+ geom_boxplot(fill="steelblue", alpha=0.3, outlier.shape=NA, width=0.2) + theme_classic() 
+c<-b+theme(axis.text.x = element_text(size=16, face="bold"),axis.text.y = element_text(size=16, face="bold"))
+d<-c+theme(axis.title.x = element_blank())+scale_y_continuous(breaks = c(0,0.2, 0.4,0.6,0.8,1))+ylab("DELFI Score")
+
+##N stage
+
+b<-ggplot(a,aes(x=reorder(`N stage group`, reorder),y=score_seq))+geom_jitter(width=0.1, color="gray", height=0.01)+ geom_boxplot(fill="steelblue", alpha=0.3, outlier.shape=NA, width=0.2) + theme_classic()
+c<-b+theme(axis.text.x = element_text(size=16, face="bold"),axis.text.y = element_text(size=16, face="bold"))
+e<-c+theme(axis.title.x = element_blank(),axis.title.y = element_blank())+scale_y_continuous(breaks = c(0,0.2, 0.4,0.6,0.8,1))
+
+library(ggpubr)
+ggarrange(d,e)
+
+```
+
+
+```{r fig4b,echo=FALSE, fig.width=12, fig.height=6,dev=c("png", "pdf")}
+
+TNM_stage_DELFI <- read_excel(here("data", "TNM_stage_DELFI_4a.xlsx"))
+a<-TNM_stage_DELFI
+
+
+b<-ggplot(a,aes(reorder(x=`TN stage`,reorder),y=a$score_seq))+geom_jitter(width=0.1, color="gray")+ geom_boxplot(fill="steelblue", alpha=0.3, outlier.shape=NA, width=0.2)+theme_classic()+scale_y_continuous(breaks = c(0,0.2, 0.4,0.6,0.8,1))+labs(y="DELFI score")
+c<-b+theme(axis.text.x = element_text(size=16, face="bold"),axis.text.y = element_text(size=16, face="bold"), axis.title.x = element_blank(), axis.title.y = element_text(face="bold", size=16))
+c
+
+```
+
+
+

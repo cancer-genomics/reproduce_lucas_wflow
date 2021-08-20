@@ -1,0 +1,43 @@
+---
+title: "Relative coverage plot and ROC"
+site: workflowr::wflow_site
+output:
+  workflowr::wflow_html:
+    code_folding: hide
+    toc: true
+editor_options:
+  chunk_output_type: console
+---
+
+
+```{r caching, echo=FALSE}
+knitr::opts_chunk$set(autodep = TRUE, echo=FALSE)
+```
+
+
+```{r load_data, echo=FALSE, include=FALSE}
+library(ggplot2)
+library(here)
+```
+
+
+```{r}
+df <- read.table(here("data", "ascl1_tpm.txt"),
+                 header = TRUE, stringsAsFactors = FALSE)
+
+df$grp <- factor(df$grp, levels = c("SCLC", "LUAD", "LUSC", "BLOOD"))
+
+p <- ggplot(df, aes(x = grp, y = log(tpm + 1))) +
+      geom_boxplot(outlier.color = "grey", fill = "cornflowerblue") +
+      cowplot::theme_cowplot() +
+      theme(axis.title.x = element_blank()) +
+      ylab("ASCL1 Expression (logTPM + 1)")+scale_x_discrete(labels=c("SCLC"="SCLC\n(n=79)", "LUAD"="LUAD\n(n=542)", "LUSC"="LUSC\n(n=504)", "BLOOD"="WBC\n(n=755)"))
+
+```
+
+```{r ascl1_expression, fig.height = 4, fig.width = 4, dev = c("png", "pdf")}
+p
+
+#ggsave(p, filename = "~/Dropbox/Cancer Genomics Lab/LUCAS/subtyping/figures/ascl1_expression.pdf",
+#       height = 4, width = 4)
+```

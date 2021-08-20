@@ -1,0 +1,48 @@
+---
+title: "Relative fragment size plot for 10 SCLC samples vs. 10 no baseline cancer samples"
+site: workflowr::wflow_site
+output:
+  workflowr::wflow_html:
+    code_folding: hide
+    toc: true
+editor_options:
+  chunk_output_type: console
+---
+
+
+```{r caching, echo=FALSE}
+knitr::opts_chunk$set(autodep = TRUE, echo=FALSE)
+```
+
+
+```{r load_data, echo=FALSE, include=FALSE}
+library(here)
+library(ggplot2)
+```
+
+
+```{r tfbs_fragment_size_10_sclc_vs_10_no_cancer, fig.width = 8, fig.height = 4, dev = c("png", "pdf")}
+df <- read.table(here("data", "ten_sample_rel_size.txt"),
+                 sep = "\t", header = TRUE, stringsAsFactors = FALSE)
+
+df$grp <- factor(df$grp, levels = c("No baseline cancer", "SCLC"))
+id_ord <- c(unique(subset(df, grp == "No baseline cancer")$id), unique(subset(df, grp == "SCLC")$id))
+df$id <- factor(df$id, levels = id_ord)
+
+p <- ggplot(df, aes(x = pos, y = rel_length, color = grp, group = id)) +
+      geom_smooth(method = "loess", span = 0.2, se = FALSE) +
+      cowplot::theme_cowplot() +
+      geom_vline(xintercept = 0, linetype = "dashed", color = "grey") +
+      ylim(c(1, 1.01)) +
+      ylab("Relative fragment size") +
+      xlab("Position relative to TFBS (bp)") +
+      scale_color_manual(values = c("grey", "slateblue")) +
+      scale_x_continuous(breaks = seq(-3000, 3000, 1000)) +
+      theme(legend.title = element_blank(),
+            legend.position = c(0.7, 0.7))
+
+p
+```
+
+
+

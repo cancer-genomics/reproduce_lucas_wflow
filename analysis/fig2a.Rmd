@@ -1,0 +1,207 @@
+---
+title: "Fragmentation profiles"
+site: workflowr::wflow_site
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: html_document
+chunk_output_type: console
+---
+
+```{r caching, echo=FALSE}
+knitr::opts_chunk$set(autodep = TRUE)
+```
+
+```{r packages, echo=FALSE, message=FALSE, warning=FALSE}
+library(ggplot2)
+library(magrittr)
+library(tidyverse)
+library(fs)
+library(grid)
+library(data.table)
+library(cowplot)
+library(devtools)
+library(here)
+load_all(here("code", "rlucas"))
+
+# 2 lines below added because of some idiosyncrasies of linux
+options(bitmapType="cairo")
+Sys.setenv(MKL_THREADING_LAYER="GNU")
+```
+
+
+```{r data, echo=FALSE}
+## fragmentation profiles - LUCAS (training)
+bins5mb <- as_tibble(bins5mb)
+bins5mb <- bins5mb %>% mutate(ratio.cor = short.cor/long.cor)
+bins5mb <- bins5mb %>% group_by(id) %>%
+    mutate(ratio.centered = scale(ratio.cor, scale=FALSE)[,1])
+
+fp2 <- inner_join(bins5mb, meta, by="id")
+
+fp2 <- fp2 %>% filter(assigned_group != 1) %>%
+    mutate(`Diagnosis category` =
+           case_when(grepl("^no baseline cancer$", patient.type) ~ "No cancer",
+                     grepl("^benign$", patient.type) ~ "benign",
+                     !grepl("^benign$|^no baseline cancer$",
+                           patient.type) ~ "Lung cancer"))
+
+fp2 <-  arrange(fp2, id, bin) %>%
+    mutate(bin=factor(bin),
+           arm=factor(arm, levels=unique(arm))) %>%
+    mutate(dx=factor(`Diagnosis category`, levels=c("No cancer", "benign",
+                                  "Lung cancer")))
+
+panel.labels <- fp2 %>%
+    group_by(dx) %>%
+    summarize(n=length(unique(id)),
+              .groups="drop") %>%
+    mutate(labels=paste0(c("Non-cancer, no biopsy (n=",
+                           "Non-cancer, benign lesion (n=",
+                           "Lung cancer (n="),
+                         n, ")"),
+           arm="1p") %>%
+    mutate(x=rep(5, 3), y=rep(0.2, 3))
+
+
+arm <- fp2 %>% group_by(arm) %>%
+  summarize(n=n(), .groups="drop") %>%
+  mutate(arm = as.character(arm))
+small.arms <- setNames(c("", "", "12q", "", "",
+                         "", "", "", "",
+                         "", "", "", "",
+                         "", ""),
+                       c("10p", "12p", "12q", "16p", "16q",
+                         "17p", "17q", "18p", "18q",
+                         "19p", "19q", "20p", "20q",
+                         "21q", "22q"))
+arm.labels <- setNames(arm$arm, arm$arm)
+arm.labels[names(small.arms)] <- small.arms
+```
+
+```{r fig2a, echo=FALSE, fig.width=30, fig.height=15, dev=c("png", "pdf")}
+fig <- fp2 %>% group_by(dx) %>%
+    ggplot(aes(x = bin, y = ratio.centered, group = id)) +
+    geom_line(size = 0.5, color="gray60") +
+              ##alpha = 0.33) +
+    labs(x = "",
+         y = "Fragmentation profile\n", color = "") +
+    ##facet_grid(dx~arm, switch = "x",
+    ##space = "free_x", scales = "free_x") +
+    facet_grid(dx~arm,  ##switch="x",
+               space="free_x", scales="free_x",
+               labeller=labeller(arm=arm.labels),
+               switch="x") +    
+    theme_classic(base_size=25) +
+    theme(axis.text.x = element_blank(),
+          axis.ticks.x = element_blank(),
+          strip.background=element_blank(),
+          strip.text.y=element_blank(),
+          axis.text.y=element_text(size=26),
+          axis.title.y=element_text(size=30)) +
+          ##strip.text.x=element_text(angle=30)) +
+    scale_y_continuous(breaks=c(-0.2,-0.1, 0, 0.1, 0.2)) +
+    coord_cartesian(ylim=c(-0.19, 0.19))
+
+
+
+#ggdraw(fig) + draw_label(label=panel.labels$labels[1], x=0., y=0.97, hjust=0, size=20)
+# ggdraw(fig) + 
+
+fig <- ggdraw(fig) + draw_grob(textGrob(
+  label=panel.labels$labels[1],
+  x = unit(0.15, "npc"),
+  y = unit(0.97, "npc"),
+  hjust = 0,
+  gp = gpar(cex=2)
+))  +
+    draw_grob(textGrob(
+     label=panel.labels$labels[2],
+     x = unit(0.15, "npc"),
+     y = unit(0.67, "npc"),
+     hjust = 0,
+     gp = gpar(cex=2)
+)) +
+    draw_grob(textGrob(
+     label=panel.labels$labels[3],
+     x = unit(0.15, "npc"),
+     y = unit(0.37, "npc"),
+     hjust = 0,
+     gp = gpar(cex=2)
+))
+
+
+tg10p  <- textGrob("10p",
+           x=unit(0.6, "npc"),
+           y=unit(0.062, "npc"), gp=gpar(cex=1.6, hjust=0))
+ 
+tg12p <- textGrob("12p",
+           x=unit(0.692, "npc"),
+           y=unit(0.062, "npc"), gp=gpar(cex=1.6, hjust=0))
+
+### changed x-coordinates a little bit (16p was trampling on 15q; 16q was trampling on 16p)
+tg16p <- textGrob("16p",
+          x=unit(0.830, "npc"),
+          y=unit(0.062, "npc"), gp=gpar(cex=1.6, hjust=0))
+
+tg16q <- textGrob("16q",
+          x=unit(0.846, "npc"),
+          y=unit(0.062, "npc"), gp=gpar(cex=1.6, hjust=0))
+
+tg17p <- textGrob(" 17p",
+          x=unit(0.86, "npc"),
+          y=unit(0.062, "npc"), gp=gpar(cex=1.6, hjust=0),
+          rot=45)
+
+
+tg17q <- textGrob(" 17q",
+          x=unit(0.875, "npc"),
+          y=unit(0.062, "npc"), gp=gpar(cex=1.6, hjust=0),
+          rot=45)
+
+tg18p <- textGrob(" 18p",
+          x=unit(0.892, "npc"),
+          y=unit(0.062, "npc"), gp=gpar(cex=1.6, hjust=0),
+          rot=45)
+
+tg18q <- textGrob(" 18q",
+          x=unit(0.906, "npc"),
+          y=unit(0.062, "npc"), gp=gpar(cex=1.6, hjust=0),
+          rot=45)
+
+tg19p <- textGrob(" 19p",
+          x=unit(0.92, "npc"),
+          y=unit(0.062, "npc"), gp=gpar(cex=1.6, hjust=0),
+          rot=45)
+
+tg19q <- textGrob(" 19q",
+          x=unit(0.935, "npc"),
+          y=unit(0.062, "npc"), gp=gpar(cex=1.6, hjust=0),
+          rot=45)
+
+tg20p <- textGrob(" 20p",
+          x=unit(0.95, "npc"),
+          y=unit(0.062, "npc"), gp=gpar(cex=1.6, hjust=0),
+          rot=45)
+
+tg20q <- textGrob(" 20q",
+          x=unit(0.965, "npc"),
+          y=unit(0.062, "npc"), gp=gpar(cex=1.6, hjust=0),
+          rot=45)
+
+tg21q <- textGrob(" 21q",
+          x=unit(0.98, "npc"),
+          y=unit(0.062, "npc"), gp=gpar(cex=1.6, hjust=0),
+          rot=45)
+
+tg22q <- textGrob(" 22q",
+          x=unit(0.99, "npc"),
+          y=unit(0.062, "npc"), gp=gpar(cex=1.6, hjust=0,
+                                       vjust=0),
+          rot=45)
+
+fig <- fig + draw_grob(tg10p) + draw_grob(tg12p) + draw_grob(tg16p) +
+    draw_grob(tg16q) + draw_grob(tg17p) + draw_grob(tg17q) + draw_grob(tg18p) +
+    draw_grob(tg18q) + draw_grob(tg19p) + draw_grob(tg19q) + draw_grob(tg20p) +
+    draw_grob(tg20q) + draw_grob(tg21q) + draw_grob(tg22q)
+fig
+##save_plot("fig2a.pdf", fig, base_width=30, base_height=15)
+```

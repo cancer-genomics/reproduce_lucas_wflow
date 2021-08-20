@@ -1,0 +1,236 @@
+---
+title: "Effect of PCR on S/L ratios without GC correction"
+site: workflowr::wflow_site
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  workflowr::wflow_html:
+    code_folding: hide
+    toc: true
+    toc_depth: 3
+    toc_float: true
+editor_options:
+  chunk_output_type: console
+---
+
+```{r packages, message=FALSE, echo=FALSE}
+library(tidyverse)
+library(ggplot2)
+library(SummarizedExperiment)
+library(paletteer)
+library(ggsci)
+library(here)
+library(devtools)
+load(here("data", "pcr_experiment.rda"))
+load_all(here("code", "rpcr"))
+##outdir <- file.path("output", "pcr_cycles.Rmd")
+##if(!dir.exists(outdir)) dir.create(outdir)
+```
+
+```{r options}
+knitr::opts_chunk$set(autodep = TRUE)
+```
+
+```{r profiles}
+coldat <- colData(pcr_experiment)
+ratios <- rpcr:::ratios
+longCounts <- rpcr:::longCounts
+shortCounts <- rpcr:::shortCounts
+R <- ratios(pcr_experiment) %>%
+  as_tibble() %>%
+  mutate(arm = rowRanges(pcr_experiment)$arm,
+         bin_index=seq_along(rowRanges(pcr_experiment))) %>%
+  gather("lab_id", "shortToLong", -c(arm, bin_index))
+
+L <- longCounts(pcr_experiment) %>%
+  as_tibble() %>%
+  mutate(arm = rowRanges(pcr_experiment)$arm,
+         bin_index=seq_along(rowRanges(pcr_experiment))) %>%
+  gather("lab_id", "count", -c(arm, bin_index))
+
+S <- shortCounts(pcr_experiment) %>%
+  as_tibble() %>%
+  mutate(arm = rowRanges(pcr_experiment)$arm,
+         bin_index=seq_along(rowRanges(pcr_experiment))) %>%
+  gather("lab_id", "count", -c(arm, bin_index))
+
+total <- (shortCounts(pcr_experiment) +
+          longCounts(pcr_experiment)) %>%
+  scale() %>%
+  as_tibble() %>%
+  mutate(arm = rowRanges(pcr_experiment)$arm,
+         bin_index=seq_along(rowRanges(pcr_experiment))) %>%
+  gather("lab_id", "count", -c(arm, bin_index))
+
+short.long <- (shortCounts(pcr_experiment)/
+               longCounts(pcr_experiment))
+short.long2 <- sweep(short.long, 2, colMeans(short.long)) %>%
+  as_tibble() %>%
+  mutate(arm = rowRanges(pcr_experiment)$arm,
+         bin_index=seq_along(rowRanges(pcr_experiment))) %>%
+  gather("lab_id", "count", -c(arm, bin_index))
+
+ids <- paste0(coldat$pcr_cycles, " PCR cycles", " (",
+              coldat$sample, ")") %>%
+  setNames(coldat$sample)
+##ids <- setNames(names(ids), ids)
+ix <- order(coldat$pcr_cycles, decreasing=FALSE)
+ids <- factor(ids, levels=ids[ix])
+##total$lab_id <- factor(total$lab_id, levels=names(ids)[ix])
+pcr_cycles <- coldat %>%
+  as_tibble() %>%
+  select(sample, pcr_cycles) %>%
+  mutate(sample=as.character(sample))
+##total2 <- total %>%
+short.long3 <- short.long2 %>%
+  mutate(lab_id=as.character(lab_id)) %>%
+  left_join(pcr_cycles, by=c("lab_id"="sample")) %>%
+  arrange(pcr_cycles) %>%
+  mutate(lab_id=factor(lab_id, levels=unique(lab_id))) %>%
+  unite("lab_pcr", c("lab_id", "pcr_cycles"), sep=", ",
+        remove=FALSE) %>%
+  mutate(lab_pcr=paste(lab_pcr, "cycles"),
+         lab_pcr=factor(lab_pcr, unique(lab_pcr)))
+
+total2 <- total %>%
+    mutate(lab_id=as.character(lab_id)) %>%
+    left_join(pcr_cycles, by=c("lab_id"="sample")) %>%
+    arrange(pcr_cycles) %>%
+    mutate(lab_id=factor(lab_id, levels=unique(lab_id))) %>%
+    unite("lab_pcr", c("lab_id", "pcr_cycles"), sep=", ",
+          remove=FALSE) %>%
+    mutate(lab_pcr=paste(lab_pcr, "cycles"),
+           lab_pcr=factor(lab_pcr, unique(lab_pcr)))
+```
+
+## Read gc corrected
+
+```{r gc}
+longCounts <- function(x) assays(x)[["long.gc"]]
+shortCounts <- function(x) assays(x)[["short.gc"]]
+L <- longCounts(pcr_experiment) %>%
+  as_tibble() %>%
+  mutate(arm = rowRanges(pcr_experiment)$arm,
+         bin_index=seq_along(rowRanges(pcr_experiment))) %>%
+  gather("lab_id", "count", -c(arm, bin_index))
+S <- shortCounts(pcr_experiment) %>%
+  as_tibble() %>%
+  mutate(arm = rowRanges(pcr_experiment)$arm,
+         bin_index=seq_along(rowRanges(pcr_experiment))) %>%
+  gather("lab_id", "count", -c(arm, bin_index))
+total <- (shortCounts(pcr_experiment) +
+          longCounts(pcr_experiment)) %>%
+  scale() %>%
+  as_tibble() %>%
+  mutate(arm = rowRanges(pcr_experiment)$arm,
+         bin_index=seq_along(rowRanges(pcr_experiment))) %>%
+  gather("lab_id", "count", -c(arm, bin_index))
+ids <- paste0(coldat$pcr_cycles, " PCR cycles", " (",
+              coldat$sample, ")") %>%
+    setNames(coldat$sample)
+totalgc <- total  %>%
+  mutate(lab_id=as.character(lab_id)) %>%
+  left_join(pcr_cycles, by=c("lab_id"="sample")) %>%
+  arrange(pcr_cycles) %>%
+  mutate(lab_id=factor(lab_id, levels=unique(lab_id))) %>%
+  unite("lab_pcr", c("lab_id", "pcr_cycles"), sep=", ",
+        remove=FALSE) %>%
+  mutate(lab_pcr=paste(lab_pcr, "cycles"),
+         lab_pcr=factor(lab_pcr, unique(lab_pcr)))
+```
+
+```{r gcfig, fig.width=15, fig.height=6, dev=c("png", "pdf")}
+total.nogc <- total2 %>%
+    mutate(GC="No GC\ncorrection")
+totalgc$GC <- "GC\ncorrected"
+dat <- bind_rows(total.nogc,
+                 totalgc) %>%
+    mutate(GC=factor(GC, c("No GC\ncorrection",
+                           "GC\ncorrected")))
+tmp <- pal_npg("nrc", alpha=0.7)(10)
+##tmp <- pal_npg("nrc", alpha = 0.8)(10)
+colors <- tmp[2:4]
+##colors <- tmp[1:3]
+A <- dat %>%
+    filter(GC==levels(GC)[1]) %>%
+    ##filter(pcr_cycles <= 4) %>%
+    mutate(pcr_cycles=factor(pcr_cycles, c(0, 4, 12))) %>%
+    ggplot(aes(bin_index, count, group=lab_pcr)) +
+    geom_line(aes(color=pcr_cycles)) +
+    facet_grid(~arm, scales="free_x", space="free_x") +
+    ylab("Coverage (centered and scaled)") +
+    xlab("") +
+    theme_bw(base_size=18) +
+    theme(strip.background=element_blank(),
+          strip.text.x=element_text(size=11, angle=90),
+          strip.text.y=element_text(size=15, angle=0),
+          legend.key=element_rect(fill="white"),
+          panel.grid=element_blank(),
+          plot.background=element_blank(),
+          panel.border=element_blank(),
+          axis.text.x=element_blank(),
+          axis.ticks.x=element_blank()) +
+    scale_colour_manual(values=colors) +
+    guides(color=FALSE) +
+    scale_x_continuous(expand=c(0, 0)) ##+
+
+```
+
+Confirm that coverage profiles are centered and scaled:
+
+```{r coverage,dev=c("png", "pdf")}
+dat %>%
+    group_by(lab_pcr) %>%
+    summarize(mean=round(mean(count, 3)),
+              sd=round(sd(count, 3)),
+              .groups="drop")
+```
+
+```{r pca, fig.width=8, fig.height=6,dev=c("png", "pdf")}
+s <- shortCounts(pcr_experiment)
+l <- longCounts(pcr_experiment)
+total  <- s + l
+pdat <- prcomp(total)
+pdat2 <- pdat$rotation %>%
+    as_tibble() %>%
+    select(PC1, PC2) %>%
+    mutate(cycles=pcr_experiment$pcr_cycles,
+           cycles=factor(cycles, levels=c(0, 4, 12)))
+var_explained <- pdat$sdev/sum(pdat$sdev) 
+var_explained <- round(var_explained*100, 0)
+lab1 <- paste0(c("PC1", "PC2"), " (", var_explained[1:2], "%", ")")
+B <- ggplot(pdat2, aes(PC1, PC2)) +
+    geom_point(aes(color=cycles), size=4.5) +
+    ##scale_y_continuous(expand=expand_scale(0.05, 0.1)) +
+    ##scale_x_continuous(expand=expand_scale(0.05, 0.1)) +
+    theme_bw(base_size=18)  +
+    theme(panel.grid=element_blank()) +
+          ##legend.position=c(0.8, 0.8)) +
+    scale_color_manual(values=colors) +
+    guides(color=guide_legend(title="PCR cycles")) +
+    xlab(lab1[1]) +
+    ylab(lab1[2])
+```
+
+
+```{r pcafig, fig.width=15, fig.height=9, dev=c("png", "pdf")}
+library(grid)
+library(gridExtra)
+lo <- grid.layout(nrow=2, ncol=1, height=unit(c(0.6, 0.4), "npc"))
+grid.newpage()
+pushViewport(viewport(layout=lo))
+pushViewport(viewport(layout.pos.row=1, layout.pos.col=1))
+pushViewport(viewport(width=unit(0.98, "npc"), height=unit(0.99, "npc")))
+print(A, newpage=FALSE)
+popViewport(2)
+pushViewport(viewport(layout.pos.row=2, layout.pos.col=1))
+pushViewport(viewport(x=unit(0.5, "npc"),
+                      y=unit(1.1, "npc"),
+                      width=unit(0.6, "npc"),
+                      height=unit(1.1, "npc"),
+                      just=c("center", "top")))
+print(B, newpage=FALSE)
+popViewport(2)
+grid.text("a", x=unit(0.015, "npc"), y=unit(0.98, "npc"), gp=gpar(cex=3.5))
+grid.text("b", x=unit(0.015, "npc"), y=unit(0.3, "npc"), gp=gpar(cex=3.5))
+```
+

@@ -1,0 +1,44 @@
+---
+title: "Visualizing Feature Distributions in a Heatmap"
+site: workflowr::wflow_site
+output: html_document
+chunk_output_type: console
+---
+
+```{r setup}
+```
+
+```{r packages, echo=FALSE, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(data.table)
+library(grid)
+library(gridExtra)
+library(here)
+```
+
+```{r data}
+fig.data <- readRDS(here('data', 'TCGA_Lung', 'fig2c_p2_data.rds'))
+```
+
+```{r plot, fig.height= 23, fig.width=8,dev=c("png", "pdf")}
+    setDT(fig.data)
+    fig.data[,bin:=as.factor(rev(bin))][]
+plot <- ggplot(fig.data, aes(x=value, y=bin, color=change, fill=change)) +
+    facet_grid(arm ~ disease, scales = 'free_y', switch = 'y', space = 'free')+
+    geom_col() +
+    scale_x_continuous() +
+    scale_fill_brewer(palette = 'Set1')+
+    scale_color_brewer(palette = 'Set1')+
+    theme_minimal() +
+    theme(strip.text.y.left = element_text(angle = 0, hjust = 0.5, vjust = 0.5),
+          axis.text.y = element_blank(), axis.text.x = element_text(size = 13),
+          axis.ticks = element_blank(),
+          panel.border = element_rect(color = "black", fill = NA, size = 0.2),
+          panel.grid =  element_blank(),
+          legend.title = element_blank())
+
+plot
+```
+
+
+

@@ -1,0 +1,188 @@
+---
+title: "Training Model Variation - Feature Importance"
+site: workflowr::wflow_site
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+    html_document:
+      code_folding: hide
+chunk_output_type: console
+---
+
+
+```{r caching, echo=FALSE}
+knitr::opts_chunk$set(autodep = TRUE)
+```
+
+```{r packages, message = FALSE, echo = FALSE}
+library(tidyverse)
+library(caret)
+library(recipes)
+library(pROC)
+library(devtools)
+library(glmnet)
+library(reshape2)
+library(here)
+load_all(here("code", "rlucas"))
+```
+
+
+```{r load.data, message = FALSE, echo = FALSE}
+features <- read_csv(here("data", "training-set.csv"))
+multinucs <- bins5mb %>% group_by(id) %>% summarize(multinucratio = sum(multinucs)/(sum(short+long)))
+features <- inner_join(multinucs, features, by="id")
+
+labels <- meta %>% select(id, assigned_group)
+labels <- labels %>% filter(assigned_group != 1) %>%
+    mutate(type = ifelse(assigned_group==2, "healthy", "cancer")) %>%
+    select(-assigned_group)
+
+features <- inner_join(labels, features, by=c("id"="id"))
+features <- features  %>% select(-starts_with("cov_"))
+
+features <- features %>% mutate(clinical_smokingstatus=factor(clinical_smokingstatus,
+                                                              c("never", "former", "current")),
+                                clinical_COPD=as.integer(clinical_COPD))
+```
+
+```{r orig.model, message = FALSE, echo = FALSE}
+model_seq <- readRDS(here("data", "model_seq_glm.rds"))
+
+model_seq$levels
+# [1] "cancer"  "healthy"
+# this indicates that the higher level is healthy and that's coded as 1 in logistic regression
+# need to flip the coefficient signs
+orig_coefs <- coef(model_seq$finalModel, s = model_seq$bestTune$lambda) * (-1)
+
+# # # we need to rescale the original coefficients by the variables' standard deviations such that we can #
+# # # make coefficient values a proxy for features' importance
+
+pr <- prep(model_seq$recipe)
+model_input <- bake(pr, new_data = model_seq$trainingData)
+
+feature_means <- model_input  %>% select(-c(id, type)) %>% colMeans()
+feature_sds <- model_input %>% select(-c(id, type)) %>% as.data.frame() %>% summarise_all(sd)
+
+feature_coefs <- data.frame(features = names(feature_sds), sd = as.numeric(feature_sds))
+feature_coefs <- merge(feature_coefs,
+	                   data.frame(features = rownames(orig_coefs),
+	                   	          orig_coefs = as.numeric(orig_coefs)),
+	                   by = 'features', all.x = TRUE)
+feature_coefs$scaled_coefs <- feature_coefs$orig_coefs * feature_coefs$sd
+
+print(feature_coefs)
+```
+
+```{r variation.models , message= FALSE, echo = FALSE}
+
+#--------------------------------------------------------------------------------------------------#
+n.folds <- 5
+n.repeats <- 10
+
+set.seed(12345)
+
+seq_features <- features %>% select( - starts_with('clinical_'), - id, - multinucratio)
+
+ctrl <- trainControl(method = "repeatedcv",
+                     number = n.folds,
+                     repeats = n.repeats,
+                     verboseIter = FALSE,
+                     savePredictions="final",
+                     classProbs=TRUE,
+                     index=createMultiFolds(seq_features$type, n.folds, n.repeats),
+                     summaryFunction = twoClassSummary)
+
+# Each row will record the (standardized) model coefficients for a particular training set in the context of repeated CV
+# Allocating 50 for the number of PCs, and later pruning to pick the minimum n across the folds. 
+coef.log <- list()
+
+glmnetGrid <- expand.grid(
+    alpha = 1,
+    lambda = model_seq$bestTune$lambda)
+
+index <- 0
+for (r in seq(n.repeats)){
+    for (f in seq(n.folds)){
+        print(paste0('Repeat ', r, ' Fold ', f))   
+        index.string <- paste0('Fold', f, 
+                               '.Rep', str_pad(as.character(r), 2, 'left', '0'))
+        print(index.string)
+        train.indices <- ctrl$index[[index.string]] 
+        test.indices <- setdiff(seq(nrow(seq_features)), train.indices)
+        train.data <- seq_features[train.indices,]
+        print(dim(train.data))
+        recipe_seq <- recipe(type ~ ., data= train.data) %>% 
+                        step_pca(starts_with("ratio_"), prefix = "ratio_pc_",  threshold=0.90)  %>%
+                        step_corr(all_predictors(), threshold=0.95) %>%
+                        step_nzv(all_predictors())
+
+        p <- prep(recipe_seq)
+        proc.data <- bake(p, new_data = train.data)
+
+        x = apply(as.matrix(proc.data %>% select(-type)), 2, as.numeric)
+        y = factor(train.data %>% pull(type), levels = c('healthy', 'cancer'))
+
+        train.model <- glmnet(x, y, family = 'binomial', alpha = glmnetGrid$alpha, lambda = glmnetGrid$lambda)
+
+        variable.scales <- apply(x, 2, sd)
+        
+        index <- index + 1
+
+        base <- as.matrix(coef(train.model))[-1,] * variable.scales
+        coef.log[[index]] <- c(base, rep(NA, 100 - length(base)))
+    }
+}
+```
+
+
+```{r aggregation.formatting, fig.width=20, fig.height=30, echo = FALSE, message = FALSE,dev=c("png", "pdf")}
+coef.log <- do.call(rbind, coef.log)
+
+# take out the row that did not converge
+coef.log <- coef.log[rowSums(coef.log != 0, na.rm = TRUE) != 0,]
+
+na.counts <- apply(coef.log, 2, function(x) sum(is.na(x)))
+crop <- min(which(na.counts == nrow(coef.log))) - 1
+coef.log <- coef.log[,1:crop]
+
+coef.z <- coef.log[,1:39]
+coef.pc <- coef.log[,40:ncol(coef.log)]
+
+orig.model.pc <- sign(subset(feature_coefs, ! grepl('zscore', features))$scaled_coefs)
+for (index in seq(11)){
+  if (orig.model.pc[index] == 1){
+    coef.pc[,index] <- abs(coef.pc[,index])
+  }
+  if (orig.model.pc[index] == -1){
+    coef.pc[,index] <- (-1) * abs(coef.pc[,index])
+  }
+}
+```
+
+```{r heatmap, echo = FALSE, message = FALSE,dev=c("png", "pdf")}
+main <- cbind(coef.z, coef.pc)
+colnames(main)[50] <- 'ratio_pc_11'
+rownames(main) <- seq_along(main[,1])
+
+colnames(main) <- gsub('zscore_', 'Z ', gsub('ratio_pc_', 'PC ', colnames(main)))
+
+main <- melt(main)
+main$Var2 <- factor(main$Var2, levels = rev(as.character(unique(main$Var2))))
+
+# '#d7191c', '#fdae61', '#ffffbf', '#abd9e9', '#2c7bb6'
+
+p1 <- ggplot(main, aes(x = Var1, y = Var2, fill = value)) +geom_tile()+ scale_x_discrete(expand = c(0.0, 0.0)) + labs(x = '', y = '')+ theme_bw() + theme(axis.ticks.y = element_blank(), legend.position = 'none') + scale_fill_distiller(limits = c(-10, 10), palette = 'RdBu', na.value = '#cccccc')
+
+orig <- feature_coefs[,c('features', 'scaled_coefs')]
+colnames(orig) <- c('Var2', 'value')
+orig$Var2 <- gsub('zscore_', 'Z ', gsub('ratio_pc_', 'PC ', orig$Var2))
+orig$Var2 <- factor(orig$Var2, levels = levels(main$Var2))
+orig$Var1 = 1
+
+p2 <- ggplot(orig, aes(x = Var1, y = Var2, fill = value)) +geom_tile()+ scale_x_discrete(expand = c(0.0, 0.0)) + labs(x = '', y = '')+ theme_bw() + theme(axis.ticks = element_blank(), axis.text = element_blank(), legend.position = 'right') + scale_fill_distiller(limits = c(-10, 10), palette = 'RdBu', na.value = '#cccccc')
+
+
+#pdf('../docs/figure/feature_importance_variation.Rmd/model_seq_coefficient_heatmap.pdf', width = 9, height = 12)
+library(cowplot)
+plot_grid(p1, p2, rel_widths = c(20, 4))
+
+```

@@ -1,0 +1,110 @@
+---
+title: "Report8"
+author: "Jamie Medina"
+date: "2/19/2021"
+output: html_document
+---
+
+# Final Figure Requested for Reviewer Comment
+
+![Schematic to follow by Dimitrios](./image.png)
+```{r background, echo=FALSE, include=FALSE}
+###################################
+# Task: Predict 
+# Created: 012221
+# Due date: Monday 25, 2021 or Tuesday 26, 2021
+#####################################
+library(readxl)
+library(tidyverse)
+library(caret)
+library(pROC)
+library(precrec)
+library(here)
+```
+
+```{r setup, include=FALSE}
+#Clean out list section
+rm(list=ls());gc()
+```
+
+
+# Final Figure
+
+```{r, echo = FALSE, warning=FALSE, message=FALSE,dev=c("png", "pdf")}
+
+###
+# Final Figure 287 samples
+model_gbm <- readRDS(here("data","cristiano-GCLOESS-lucas-cov-z-mito-orig-delfi473.rds"))
+
+# get prediction table ready for ROC
+pred.p <- model_gbm$pred %>% filter(n.trees==150, interaction.depth==3) %>%
+  group_by(rowIndex) %>% dplyr::summarize(obs=obs[1], Cancer.GBM =mean(Cancer))
+
+#Lucas run on score.seq
+model_seq <- readRDS(here("data","model_seq_glm.rds"))
+# getTrainPerf(model_seq)
+pred.cov2 <- model_seq$pred %>%
+    filter(alpha==model_seq$bestTune$alpha, lambda==model_seq$bestTune$lambda) %>%
+    group_by(rowIndex) %>% dplyr::summarize(obs=obs[1], score.seq=mean(cancer))
+
+
+###
+# Final Figure 277 samples
+model_gbm <- readRDS(here("data","cristiano-filtered-lucas2-cov-z-mito-gcloess-orig-delfi473.rds"))
+# get prediction table ready for ROC
+pred.r <- model_gbm$pred %>% filter(n.trees==150, interaction.depth==3) %>%
+  group_by(rowIndex) %>% dplyr::summarize(obs=obs[1], Cancer.GBM =mean(Cancer))
+
+
+model_seq <- readRDS(here("data","score.seq_fig3b_filtered.rds"))
+
+pred.cov <- model_seq$pred %>%
+    filter(alpha==model_seq$bestTune$alpha, lambda==model_seq$bestTune$lambda) %>%
+    group_by(rowIndex) %>% dplyr::summarize(obs=obs[1], score.seq=mean(Cancer))
+
+
+layout(matrix(c(1,1), 1, 1, byrow = TRUE))
+
+op <- par(cex = 1.02, mar = c(5,9,4,2) + 0.1) ## default is c(5,4,4,2) + 0.1
+
+b <- plot(roc(pred.p$obs, pred.p$Cancer.GBM, levels=c("Healthy", "Cancer"), 
+              ci=TRUE, auc.polygon=TRUE), las=1, ci=TRUE, 
+          ylab='', 
+          cex.axis = 1.1, cex.lab = 1.1, pt.cex = 4,
+          print.auc=TRUE, print.auc.x=0.7, print.auc.y=0.05, identity.col="grey", 
+          #main = "Iteration 1: 287 Patients",
+          col= "red", grid.v=c(0.95, 0.9,0.8), grid.col=c("grey", "white"),
+          print.auc.col = "red", print.thres.cex = 2, print.auc.pattern = "Cristiano et al, AUC: %.2f (%.2f-%.2f)", add = FALSE, asp=NA)
+
+b <- plot(roc(pred.cov2$obs, pred.cov2$score.seq, levels=c("healthy", "cancer"),ci=TRUE, 
+              auc.polygon=TRUE), ci=TRUE, print.auc=TRUE, 
+          ylab='', 
+          las=1, cex.axis = 1.1, cex.lab = 1.1,
+          print.auc.x=0.685, print.auc.y=0.1, identity.col="grey", 
+          col= "steelblue", #grid.v = c(0.95, 0.9, 0.8),
+          print.auc.col = "steelblue", print.auc.pattern = "Mathios et al, AUC: %.2f (%.2f-%.2f)", add = TRUE, asp=NA)
+
+b <- title(ylab = "Sensitivity", cex.lab = 1.1, line = 7.7)
+
+par(op)
+
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

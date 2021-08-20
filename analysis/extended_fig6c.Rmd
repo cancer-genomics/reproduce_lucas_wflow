@@ -1,0 +1,158 @@
+---
+title: "Fragment lengths"
+site: workflowr::wflow_site
+output:
+  workflowr::wflow_html:
+    code_folding: hide
+    toc: true
+editor_options:
+  chunk_output_type: console
+---
+
+
+```{r caching, echo=FALSE}
+knitr::opts_chunk$set(autodep = TRUE, echo=FALSE)
+```
+
+
+```{r packages, message=FALSE}
+library(RColorBrewer)
+library(SummarizedExperiment)
+library(ggplot2)
+library(tidyverse)
+library(dplyr)
+library(magrittr)
+library(here)
+library(devtools)
+
+load_all(here("code","rlucas"))
+
+```
+
+# JHU validation set
+
+```{r jhu_validationset}
+##
+## validation set
+##
+data(valid_metadata, package="rlucas")
+vmeta <- valid_meta %>%
+    as_tibble() %>%
+    dplyr::rename(pgdx_id=id) %>%
+    set_colnames(tolower(colnames(.))) %>%
+    set_colnames(str_replace_all(colnames(.), " ", "_")) %>%
+    mutate(stage=ifelse(is.na(stage), "Non-cancer", stage),
+           stage=ifelse(stage=="NA", "Non-cancer", stage),
+           cancer_status=ifelse(sample_type=="cancer",
+                                "Cancer", "Non-cancer")) %>%
+    select(pgdx_id, cancer_status, stage)
+stats <- readRDS(here("data", "stats.rds")) %>%
+    as_tibble() %>%
+    dplyr::rename(pgdx_id=id) %>%
+    left_join(vmeta, by="pgdx_id") %>%
+    mutate(cancer_status=factor(cancer_status,
+                                c("Non-cancer", "Cancer")))
+
+stats %>%
+    group_by(stage) %>%
+    summarize(median=median(median), .groups="drop") %>%
+    pull(median)
+
+stats %>%
+    group_by(stage) %>%
+    summarize(median=median(mode), .groups="drop") %>%
+    pull(median)
+```
+
+# LUCAS
+
+```{r lucas}
+data(se, package="rlucas")
+se <- se[, se$assigned_group %in% c(2,3)]
+stagelevels <- c("No biopsy", "Benign nodule",
+                 "I", "II", "III", "IV")
+coldat <- colData(se) %>%
+    as_tibble() %>%
+    select(pgdx_id, patient_type, stage,
+           assigned_group) %>%
+    ##filter(assigned_group %in% c(2,3)) %>%
+    mutate(stage2=ifelse(is.na(stage), patient_type, stage),
+           stage2=case_when(stage2=="no baseline cancer"~"No biopsy",
+                            stage2=="benign"~"Benign nodule",
+                            stage2=="1"~"I",
+                            stage2=="2"~"II",
+                            stage2=="3"~"III",
+                            stage2=="4"~"IV",
+                            TRUE~stage2),
+           stage2=factor(stage2, stagelevels),
+           cancer_status=ifelse(stage2 %in% c("I", "II", "III", "IV"),
+                                "Cancer",
+                                "Non-cancer"),
+           cancer_status=factor(cancer_status, c("Non-cancer", "Cancer")))
+
+
+flen <- here("data", "median_lengths.R",
+             paste0(se$pgdx_id, ".rds")) %>%
+    "["(file.exists(.)) %>%
+    map_dfr(function(x) {
+        xx <- readRDS(x) %>%
+            mutate(pgdx_id=basename(x),
+                   pgdx_id=str_replace_all(pgdx_id, "\\.rds", ""))
+    })
+lucas <- coldat %>%
+    left_join(flen, by="pgdx_id")
+which(is.na(lucas$median))
+```
+
+# LUCAS and validation set
+
+```{r combined}
+jhuvalid <- stats %>%
+    select(pgdx_id, cancer_status, stage, median, mode) %>%
+    mutate(study="Validation cohort") %>%
+    mutate(stage=ifelse(stage=="Non-cancer", "No biopsy", stage))
+valid_map <- tibble(lab_id=valid_meta$Patient, pgdx_id=valid_meta$id) %>%
+    mutate(cohort="validation")
+lucas_map <- tibble(lab_id=colnames(se), pgdx_id=se$pgdx_id) %>%
+    mutate(cohort="LUCAS")
+id_map <- bind_rows(valid_map, lucas_map)
+
+rename <- dplyr::rename
+lucas2 <- lucas %>%
+    select(-stage) %>%
+    rename(stage=stage2) %>%
+    select(pgdx_id, cancer_status, stage, mode, median) %>%
+    filter(!is.na(mode)) %>%
+    mutate(study="LUCAS cohort")
+
+combined <- bind_rows(lucas2, jhuvalid) %>%
+    mutate(study=factor(study, c("LUCAS cohort",
+                                 "Validation cohort"))) %>%
+    mutate(stage=factor(stage, c("No biopsy",
+                                 "Benign nodule",
+                                 "I", "II", "III", "IV")))
+```
+
+```{r medians, fig.width=10, fig.height=6, dev=c("png", "pdf")}
+combined %>%
+    ggplot(aes(stage, median)) +
+    geom_jitter(width=0.05) +
+    geom_boxplot(fill="gray90", alpha=0.3, width=0.2,
+               outlier.shape=NA) +
+    theme_bw(base_size=17) +
+    facet_grid(study~cancer_status, space="free_x", scales="free_x") +
+    theme(strip.background=element_blank(),
+          panel.grid=element_blank(),
+          strip.text.y=element_text(angle=0,
+                                    hjust=0)) +
+    guides(color=guide_legend(title="")) +
+    xlab("") + ylab("Median length (bp)")
+csvdat <- id_map %>%
+    left_join(combined, by="pgdx_id")
+missing <- filter(csvdat, is.na(median))
+#csvdat %>%
+ #   select(-mode) %>%
+  #  write_csv(here("docs", "figure",
+   #                "fragment_lengths.Rmd",
+    #               "fragment_lengths.csv"))
+```

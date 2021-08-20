@@ -1,0 +1,20 @@
+Package: PlasmaTools.lucas
+Title: Tools for the analysis of cfDNA in the plasma
+Version: 0.0.0.9100
+Authors@R: person("Stephen", "Cristiano", email = "stephen@jhmi.edu", role = c("aut", "cre"))
+Description: Methods for discovery of circulating tumor DNA present in plasma.
+Depends: R (>= 3.6.1),
+    data.table,
+    tidyverse,
+    Rsamtools,
+    GenomicAlignments,
+    GenomicRanges,
+    BiocGenerics,
+    biovizBase,
+    matrixStats
+Imports:
+    RColorBrewer,
+    methods
+License: Artistic-2.0
+Encoding: UTF-8
+LazyData: true

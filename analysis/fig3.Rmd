@@ -1,0 +1,515 @@
+---
+title: "Distribution of DELFI scores by stage and histology"
+site: workflowr::wflow_site
+output:
+  workflowr::wflow_html:
+    code_folding: hide
+    toc: true
+editor_options:
+  chunk_output_type: console
+---
+
+
+```{r caching, echo=FALSE}
+knitr::opts_chunk$set(autodep = TRUE, echo=FALSE)
+```
+
+
+# DELFI score distribution
+
+
+```{r load_data, echo=FALSE, include=FALSE}
+library(SummarizedExperiment)
+library(devtools)
+library(magrittr)
+library(stringr)
+library(tidyverse)
+library(grid)
+library(lemon)
+library(gridExtra)
+library(cowplot)
+library(data.table)
+library(pROC)
+library(RColorBrewer)
+library(here)
+load_all(here("code", "rlucas"))
+source(here("code", "plot-roc.r"))
+data(se, package="rlucas")
+rename <- dplyr::rename
+```
+
+## Distribution by stage and histology
+
+```{r scores}
+model_levels <- c("LUCAS cohort",
+                  "LUCAS cohort w/o prior cancer",
+                  "LUCAS cohort w/o prior cancer, age 50-80, smoker")
+dat1 <- colData(se) %>%
+    as_tibble() %>%
+    mutate(lab_id=colnames(se)) %>%
+    filter(!is.na(score_seq)) %>%
+    select(lab_id, score_seq) %>%
+    set_colnames(c("lab_id", "score")) %>%
+    mutate(training_model=model_levels[1])
+dat2 <- colData(se) %>%
+    as_tibble() %>%
+    mutate(lab_id=colnames(se)) %>%
+    filter(!is.na(score_no_priorcancer)) %>%
+    select(lab_id, score_no_priorcancer) %>%
+    set_colnames(c("lab_id", "score")) %>%
+    mutate(training_model=model_levels[2])
+dat3 <- colData(se) %>%
+    as_tibble() %>%
+    mutate(lab_id=colnames(se)) %>%
+    filter(!is.na(score_hr_smokers)) %>%
+    select(lab_id, score_hr_smokers) %>%
+    set_colnames(c("lab_id", "score")) %>%
+    mutate(training_model=model_levels[3])
+dat <- bind_rows(dat1, dat2, dat3) %>%
+    mutate(training_model=factor(training_model,
+                                 model_levels))
+##dat4 <- bind_rows(dat1, dat2, dat3) %>%
+##    mutate(training_model=factor(training_model,
+##                                 model_levels))
+check <- left_join(dat2, fig3_clindat(se), by="lab_id") %>%
+    mutate(cancer=ifelse(!is.na(stage), "yes", "no"),
+           cancer=factor(cancer, c("no", "yes")))
+pROC::roc(cancer ~ score, check) %>%
+    auc()
+pROC::roc(cancer ~ score, data=filter(check, is.na(stage) | stage=="I" )) %>%
+    auc()
+```
+
+# Training set characteristics
+
+```{r trainingsets, fig.width=12, fig.height=8, dev=c("png", "pdf")}
+clindat <- colData(se) %>%
+    as_tibble() %>%
+        mutate(lab_id=colnames(se)) %>%
+        mutate(training_set1=ifelse(is.na(score_seq), 0, 1),
+               training_set2=ifelse(is.na(score_no_priorcancer), 0, 1),
+               training_set3=ifelse(is.na(score_hr_smokers), 0, 1),
+               nsets=training_set1+training_set2+training_set3) %>%
+    filter(nsets > 0) %>%
+    mutate(histology=as.character(histology),
+           stage=as.character(stage),
+           histology=ifelse(histology=="Metastasis from another primary cancer",
+                                "Lung metastasis", histology)) %>%
+    select(lab_id, histology, patient_type, stage, hist_dx,
+           assigned_group,
+           age,
+           training_set1,
+           training_set2,
+           training_set3) ##%>%
+##    mutate(patient_type=case_when(patient_type=="met to lung"~"lung cancer",
+##                                  patient_type=="met to lung, other cancer"~"lung cancer",
+##                                  patient_type=="lung cancer, other cancer"~"lung cancer",
+##                                  patient_type=="lung cancer, later lung cancer"~"lung cancer",
+##                                  TRUE~patient_type))
+## stack training sets
+set1 <- filter(clindat, training_set1==1) %>%
+    mutate(set="A")
+set2 <- filter(clindat, training_set2==1) %>%
+    mutate(set="B")
+set3 <- filter(clindat, training_set3==1) %>%
+    mutate(set="C")
+cohorts <- bind_rows(set1, set2, set3) %>%
+    group_by(set, patient_type) %>%
+    summarize(n=length(unique(lab_id)),
+              .groups="drop") %>%
+    mutate(cancer=ifelse(patient_type %in% c("benign", "no baseline cancer"),
+                         "Non-cancer", "Cancer"))
+```
+
+
+# Distribution of scores
+
+```{r categories}
+source(here("code", "plot-roc.R"))
+combined <- fig3_data(se, dat1, dat2, dat3)
+```
+
+```{r fig3A, fig.width=20, fig.height=6, dev=c("png", "pdf")}
+colors <- brewer.pal(3, "Dark2")
+names(colors) <- model_levels
+
+combined2 <- combined %>%
+    mutate(x=as.character(groups),
+           x=ifelse(x=="Non-cancer", "Non-cancer individuals", x),
+           groups=factor(x, levels=c("Non-cancer individuals", "Cancer stage", "Histology")))
+N <- combined2 %>%
+    group_by(category, training_model) %>%
+    summarize(n=length(unique(lab_id)),
+              groups=unique(groups),
+              .groups="drop") %>%
+    mutate(score=-0.05)
+A <- combined2 %>%
+    ggplot(aes(category, score, fill=training_model)) +
+    geom_point(aes(fill=training_model),
+               position=position_jitterdodge(0.2, dodge.width=0.5),
+               pch=21, alpha=0.5, size=0.7,
+               color="gray") +
+    geom_boxplot(outlier.shape=NA, alpha=0.3,
+                 width=0.3,
+                 position=position_dodge(0.5)) +
+    theme_classic(base_size=20) +
+    theme(panel.grid=element_blank(),
+          axis.text.x=element_text(size=12),
+          ##legend.position="bottom",
+          ##legend.justification=c("center", "bottom"),
+          strip.background=element_rect(fill="white", color="black"),
+          strip.placement="outside") +
+    scale_y_continuous(expand=expansion(add=c(0.04, 0.1)),
+                       breaks=seq(0, 1, by=0.2),
+                       labels=as.character(seq(0, 1, by=0.2))) +
+    xlab("") +
+    ylab("DELFI score") +
+    scale_fill_manual(values=colors) +
+    ##guides(fill=guide_legend(title=""), color=guide_legend(title="")) +
+    guides(fill="none", color="none") +
+    facet_wrap(~groups, nrow=1, scales="free_x", strip.position="bottom")
+Nlabel <- tibble(groups=levels(N$groups)[1]) %>%
+    mutate(groups=factor(groups, levels(N$groups)),
+           label="n", score=-0.05,
+           category=levels(N$category)[1],
+           category=factor(category, levels(N$category)),
+           training_model=N$training_model[1])
+A <- A + geom_text(data=N, aes(label=n), size=4, position=position_dodge(0.5)) +
+    geom_text(data=Nlabel, aes(x=0.5, label="n"), size=4)
+A
+```
+
+# Internally cross-validated performance (ROC curves)
+
+```{r performance_data}
+category_levels <- c("No biopsy",
+                     "Benign nodule",
+                     "I", "II", "III", "IV",
+                     "Adenocarcinoma", "Squamous",
+                     "SCLC", "Lung metastasis")
+nocancer_labels <- c("no baseline cancer", "benign",
+                     "no lung cancer, other cancer",
+                     "no lung cancer, later lung cancer")
+clindat <- fig3_clindat(se)
+overall <- bind_rows(dat1, dat2, dat3) %>%
+    mutate(training_model=factor(training_model, model_levels)) %>%
+    left_join(clindat, by="lab_id") %>%
+    mutate(class=ifelse(patient_type %in% nocancer_labels, "No cancer",
+                         "Cancer"),
+           class=factor(class, c("No cancer", "Cancer")))
+overall.list <- split(overall, overall$training_model)
+roc_overall  <-  overall.list %>%
+    map_dfr(performance) %>%
+    mutate(category="Overall")
+roc_strata <- fig3_roc(se, dat1, dat2, dat3,
+                       model_levels)
+roc_overall2 <- roc_overall %>%
+    mutate(training_model=as.character(training_model),
+           auc=format(round(auc, 2), nsmall=2),
+           lower=format(round(lower, 2), nsmall=2),
+           upper=format(round(upper, 2), nsmall=2),
+           auc_label=paste0(auc, " (", lower, "-", upper, ")"),
+           auc_label=factor(auc_label, unique(auc_label)))
+```
+
+```{r overall,dev=c("png", "pdf")}
+roc_colors <- colors %>%
+    setNames(levels(roc_overall2$auc_label))
+B <- roc_overall2 %>%
+    ggplot(aes(spec, sens, group=auc_label)) +
+    geom_vline(xintercept=0.80,
+               color="gray80", size=0.5, linetype="dashed") +
+    geom_line(aes(color=auc_label), size=1.1) +
+    scale_x_reverse(expand=c(0, 0.01),
+                    breaks=c(0, 0.25, 0.5, 0.80, 1),
+                    labels=as.character(
+                        c("0", ".25", ".50", ".80", "1.0"))) +
+    scale_y_continuous(expand=c(0, 0.01),
+                       breaks=c(0, 0.25, 0.5, 0.75, 1),
+                       labels=as.character(
+                           c("0", ".25", ".50", ".75", "1.0"))) +
+    scale_color_manual(values=roc_colors) +
+    theme_classic(base_size=20) +
+    theme(panel.grid=element_blank(),
+          legend.position=c(0.6, 0.2),
+          aspect.ratio=0.8,
+          legend.text.align=1,
+          legend.title=element_text(size=16)) +
+    xlab("Specificity") + ylab("Sensitivity") +
+    guides(color=guide_legend(title="AUC: (95% CI)", hjust=1))
+B
+```
+
+```{r roc_categories,fig.width = 20, fig.height = 20, message=FALSE, warning=FALSE,dev=c("png", "pdf")}
+roc_strata2 <- roc_strata %>%
+    mutate(training_model=as.character(training_model),
+           auc=format(round(auc, 2), nsmall=2),
+           lower=format(round(lower, 2), nsmall=2),
+           upper=format(round(upper, 2), nsmall=2),
+           auc_label=paste0(auc, " (", lower, "-", upper, ")"),
+           auc_label=factor(auc_label, unique(auc_label)))
+models <- model_levels
+legends <- roc_strata2 %>%
+    select(category, training_model, auc_label) %>%
+    distinct() %>%
+    mutate(training_model=factor(training_model, unique(training_model)),
+           training_model=fct_rev(training_model),
+           x=0.7,
+           xend=0.75,
+           y=c(0.1, 0.2, 0.3)[as.integer(training_model)])
+C2 <- roc_strata2 %>%
+    mutate(training_model=factor(training_model, models)) %>%
+    ggplot(aes(spec, sens, group=training_model)) +
+    geom_vline(xintercept=0.80,
+               color="gray80", size=0.5, linetype="dashed") +
+    geom_line(aes(color=training_model), size=1) +
+    scale_x_reverse(expand=c(0, 0.01),
+                    breaks=c(0, 0.25, 0.5, 0.80, 1),
+                    labels=as.character(
+                        c("0", ".25", ".50", ".80", "1.0"))) +
+    scale_y_continuous(expand=c(0, 0.01),
+                       labels=as.character(
+                           c("0", ".25", ".50", ".75", "1.0"))) +
+    geom_segment(data=legends, aes(x=x, xend=xend,
+                                   y=y, yend=y,
+                                   color=training_model),
+                 size=1,
+                 inherit.aes=FALSE) +
+    geom_text(data=legends, aes(x=xend, y=y, label=auc_label),
+              nudge_x=0.09, hjust=0,
+              size=5) +
+    theme_classic(base_size=20) +
+    scale_color_manual(values=colors) +
+    theme(panel.background=element_blank(),
+          panel.grid=element_blank(),
+          legend.position="top",
+          ##legend.position=c(0.8, 0.2),
+          axis.line.x.bottom=element_line(color="black"),
+          strip.background=element_blank(),
+          aspect.ratio=0.95) +
+    xlab("Specificity") + ylab("Sensitivity") +
+    guides(color=guide_legend(title="")) +
+    facet_rep_wrap(~category, nrow=2)
+C2
+```
+
+# External validation
+
+Cutoff for 80% specificity in LUCAS
+
+```{r lucas_cutoff}
+lucas <- overall.list[[1]] %>%
+    select(score, class)
+tmp <- pROC::roc(class~score, data=lucas, ret=TRUE)
+cutoff <- tibble(sens=tmp$sens, spec=tmp$spec, thresholds=tmp$thresholds) %>%
+    filter(spec >= 0.8) %>%
+    arrange(spec) %>%
+    "["(1, )
+cutoff
+##
+## sensitivity by stage for lucas at this cutoff
+##
+lucas <- left_join(dat1, clindat, by="lab_id") %>%
+    select(lab_id, score, stage, patient_type) %>%
+    mutate(stage=ifelse(stage %in% c("III", "IV"), "III/IV", stage),
+           class=ifelse(patient_type %in% c("no baseline cancer", "benign"),
+                        "No cancer", "Cancer"),
+           class=factor(class, c("No cancer", "Cancer")))
+lucas_nocancer <- filter(lucas, is.na(stage)) %>%
+    select(-stage)
+lucas_stage <- lucas %>%
+    filter(!is.na(stage)) %>%
+    group_by(stage) %>%
+    nest()
+lucas_stage$data2 <- lucas_stage$data %>%
+    map(function(x, nocancer) bind_rows(x, nocancer), nocancer=lucas_nocancer)
+performance_at_cutoff <- function(x, cutoff){
+    robj <- pROC::roc(class~score, x, ret=TRUE)
+    results <- tibble(sens=robj$sens, spec=robj$spec, thresholds=robj$thresholds) %>%
+        filter(thresholds >= cutoff) %>%
+        arrange() %>%
+        "["(1, )
+    results
+}
+lucas_stage$performance <- lucas_stage$data2 %>%
+    map(performance_at_cutoff, cutoff[["thresholds"]])
+l <- unnest(lucas_stage, performance) %>%
+    mutate(n=map_int(data, nrow),
+           n_nocancer=map_int(data2, function(x) sum(x$class=="No cancer"))) %>%
+    mutate(tp=n*sens,
+           tn=n_nocancer*spec) %>%
+    mutate(sens_lower=qbeta(0.05, 0.5+tp, 0.5+(n-tp)),
+           sens_upper=qbeta(0.95, 0.5+tp, 0.5+(n-tp)),
+           spec_lower=qbeta(0.05, 0.5+tn, 0.5+(n_nocancer - tn)),
+           spec_upper=qbeta(0.95, 0.5+tn, 0.5+(n_nocancer - tn))) %>%
+    ungroup() %>%
+    select(stage, n, n_nocancer, spec, sens,
+           sens_lower, sens_upper, spec_lower, spec_upper)
+lucas_perf <- tibble(stage=c(l$stage, 0),
+                     value=c(l$sens, l$spec[1]),
+                     n=c(l$n, l$n_nocancer[1]),
+                     lower=c(l$sens_lower, l$spec_lower[1]),
+                     upper=c(l$sens_upper, l$spec_upper[1]),
+                     statistic=c(rep("Sensitivity", 3), "Specificity")) %>%
+    mutate(validation="Training set (LUCAS)")
+```
+
+
+```{r validation_data}
+validation_set <- valid_meta %>%
+    as_tibble() %>%
+    set_colnames(tolower(colnames(.))) %>%
+    set_colnames(str_replace_all(colnames(.), " ", "_")) %>%
+    rename(pgdx_id=id) %>%
+    select(pgdx_id, sample_type, stage) %>%
+    mutate(class=ifelse(sample_type=="healthy", "No cancer", "Cancer"),
+           class=factor(class, c("No cancer", "Cancer"))) %>%
+    select(-sample_type) %>%
+    mutate(stage=ifelse(stage %in% c("III", "IV"), "III/IV", stage))
+validation_set2 <- read_csv(here("data", "validation_preds.csv")) %>%
+    select(cancer, id) %>%
+    set_colnames(c("score", "pgdx_id")) %>%
+    left_join(validation_set, by="pgdx_id") %>%
+    mutate(training_model=model_levels[1])
+v_nocancer <- filter(validation_set2, class=="No cancer")
+v_nocancer %>%
+    pull(pgdx_id) %>%
+    unique() %>%
+    length()
+v_cancer <- filter(validation_set2, class=="Cancer") %>%
+    group_by(stage) %>%
+    nest()
+v_cancer$data2 <- v_cancer$data %>%
+    map(function(x, nocancer) bind_rows(x, nocancer), v_nocancer)
+v_cancer$performance <- v_cancer$data2 %>%
+    map(performance_at_cutoff, cutoff=cutoff[["thresholds"]])
+v <- unnest(v_cancer, performance) %>%
+    mutate(n=map_int(data, nrow),
+           n_nocancer=map_int(data2, function(x) sum(x$class=="No cancer")),
+           tp=n*sens,
+           tn=n_nocancer*spec) %>%
+    mutate(sens_lower=qbeta(0.05, 0.5+tp, 0.5+(n-tp)),
+           sens_upper=qbeta(0.95, 0.5+tp, 0.5+(n-tp)),
+           spec_lower=qbeta(0.05, 0.5+tn, 0.5+(n_nocancer-tn)),
+           spec_upper=qbeta(0.95, 0.5+tn, 0.5+(n_nocancer-tn))) %>%
+    select(stage, n, n_nocancer, spec, sens,
+           sens_lower, sens_upper,
+           spec_lower, spec_upper) %>%
+    ungroup()
+valid_perf <- tibble(stage=c(v$stage, 0),
+                     value=c(v$sens, v$spec[1]),
+                     n=c(v$n, v$n_nocancer[1]),
+                     lower=c(v$sens_lower, v$spec_lower[1]),
+                     upper=c(v$sens_upper, v$spec_upper[1]),
+                     statistic=c(rep("Sensitivity", 3), "Specificity")) %>%
+    mutate(validation="Validation set")
+perf <- bind_rows(lucas_perf, valid_perf) %>%
+    mutate(validation=factor(validation, c("Training set (LUCAS)",
+                                           "Validation set"))) %>%
+    mutate(stage=factor(stage, c("0", "I", "II", "III/IV")),
+           statistic=factor(statistic, c("Specificity", "Sensitivity")))
+xlabels <- perf %>%
+    pivot_wider(id_cols=stage, names_from=validation, values_from=n) %>%
+    set_colnames(c("stage", "n1", "n2")) %>%
+    mutate(stage0=as.character(stage),
+           stage0=ifelse(stage0=="0", "Non-cancer", stage0)) %>%
+    mutate(label=paste0(stage0, "\n(", n1, " | ", n2, ")"),
+           stage0=factor(stage0, c("Non-cancer", "I", "II", "III/IV"))) %>%
+    arrange(stage)
+perf2 <- perf %>%
+    left_join(xlabels, by="stage") %>%
+    mutate(label=factor(label, xlabels$label))
+N <- perf2 %>%
+    select(statistic, stage0, n, upper, validation)
+```
+
+```{r fig3C,dev=c("png", "pdf")}
+colors2 <- c(colors[1], "gray20") %>%
+    setNames(levels(perf2$validation))
+D <- perf2 %>%
+    ggplot(aes(stage0, value, group=validation)) +
+    geom_errorbar(aes(ymin=lower, ymax=upper, color=validation),
+                  width=0.1,
+                  position=position_dodge(width=0.5)) +
+    geom_point(aes(color=validation),
+               position=position_dodge(width=0.5)) +
+    facet_grid(~statistic, space="free_x", scales="free_x") +
+    theme_classic(base_size=20) +
+    theme(panel.grid=element_blank(),
+          panel.background=element_rect(fill="white",
+                                        color="gray30"),
+          legend.position=c(0.6, 0.2),
+          strip.background=element_blank(),
+          rect=element_blank()) +
+    ##ylim(c(0, 1)) +
+    geom_hline(yintercept=1, linetype="dashed", color="black") +
+    ##geom_hline(yintercept=0.8, linetype="dashed", color="gray") +
+    scale_color_manual(values=colors2) +
+    ylab("Performance") + xlab("") +
+    guides(color=guide_legend(title="")) +
+    geom_text(data=N, aes(stage0, upper + 0.04, label=n),
+              position=position_dodge(width=0.5),
+              color="gray50", size=4) +
+    scale_y_continuous(breaks=c(0, 0.25, 0.5, 0.8, 1.0),
+                       labels=scales::percent_format(accuracy=1),
+                       limit=c(0, 1.05),
+                       expand=expansion(add=c(0, 0.05)))
+D
+```
+
+# Composite figure
+
+```{r composite, fig.width=25, fig.height=14, dev=c("png", "pdf")}
+w <- c(0.65, 0.35) %>%
+    "/"(sum(.))
+overall.lo <- grid.layout(nrow=2, ncol=2,
+                          widths=unit(w, "npc"),
+                          heights=unit(c(0.35, 0.65),
+                                       "npc"))
+row1.lo <- grid.layout(nrow=1, ncol=2,
+                       widths=unit(w, "npc"))
+w <- c(0.7, 0.3) %>%
+    "/"(sum(.))
+row2.lo <- grid.layout(nrow=1, ncol=2,
+                       widths=unit(w, "npc"))
+grid.newpage()
+pushViewport(viewport(layout=overall.lo))
+pushViewport(viewport(layout.pos.row=1, layout.pos.col=1))
+pushViewport(viewport(y=unit(0.98, "npc"),
+                      height=unit(1, "npc"),
+                      width=unit(0.98, "npc"),
+                      just="top"))
+print(A, newpage=FALSE)
+popViewport(2)
+pushViewport(viewport(layout.pos.row=1, layout.pos.col=2))
+pushViewport(viewport(y=unit(0.99, "npc"),
+                      x=unit(0, "npc"),
+                      height=unit(0.95, "npc"),
+                      width=unit(0.95, "npc"),
+                      just=c("left", "top")))
+print(D, newpage=FALSE)
+popViewport(2)
+pushViewport(viewport(layout.pos.row=2, layout.pos.col=1))
+pushViewport(viewport(x=unit(0.02, "npc"),
+                      y=unit(1.08, "npc"),
+                      height=unit(1.1, "npc"),
+                      width=unit(0.98, "npc"),
+                      just=c("left", "top")))
+print(C2, newpage=FALSE)
+popViewport(2)
+pushViewport(viewport(layout.pos.row=2, layout.pos.col=2))
+pushViewport(viewport(x=unit(0.02, "npc"),
+                      y=unit(0.8, "npc"),
+                      height=unit(0.7, "npc"),
+                      width=unit(1, "npc"),
+                      just=c("left", "top")))
+print(B, newpage=FALSE)
+popViewport(2)
+cex <- 2.5
+grid.text("a", x=unit(0.01, "npc"), y=unit(0.98, "npc"),
+          gp=gpar(cex=cex, fontface="bold"))
+grid.text("b", x=unit(0.01, "npc"), y=unit(0.58, "npc"),
+          gp=gpar(cex=cex, fontface="bold"))
+grid.text("c", x=unit(0.65, "npc"), y=unit(0.98, "npc"),
+          gp=gpar(cex=cex, fontface="bold"))
+```

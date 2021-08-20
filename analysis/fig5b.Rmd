@@ -1,0 +1,72 @@
+---
+title: "ASCL1 target gene heatmap"
+site: workflowr::wflow_site
+output:
+  workflowr::wflow_html:
+    code_folding: hide
+    toc: true
+editor_options:
+  chunk_output_type: console
+---
+
+
+```{r caching, echo=FALSE}
+knitr::opts_chunk$set(autodep = TRUE, echo=FALSE)
+```
+
+
+```{r load_data, echo=FALSE, include=FALSE}
+library(ggplot2)
+library(pheatmap)
+library(here)
+```
+
+
+```{r, fig1, dev=c("png", "pdf")}
+tpm <- read.table(here("data", "tpm.txt"),
+                  header = TRUE, stringsAsFactors = FALSE, check.names = FALSE)
+id_subtype_key <- read.table(here("data", "id_subtype_key.txt"),
+                  header = TRUE, stringsAsFactors = FALSE)
+
+
+#----------------------------------------------------------------------------------------------------
+# Creating a heatmap where genes with expression > 3 SDs above the mean are marked as overexpressed
+#---------------------------------------------------------------------------------------------------------------------------------------
+# Converting TPM values to Z scores
+scaled_tpm <- t(scale(t(tpm)))
+
+
+```
+
+```{r fig2, dev=c("png", "pdf")}
+##ggsave(p, filename = "~/Dropbox/Cancer Genomics Lab/LUCAS/subtyping/figures/target_gene_heatmap_overexpressed.pdf",
+  ##     height = 5, width = 10)
+#---------------------------------------------------------------------------------------------------------------------------------------
+
+
+#-------------------------------------------------------------------------------------------
+# Creating a heatmap of raw gene expression values or Z scores and unsupervised clustering
+#---------------------------------------------------------------------------------------------------------------------------------------
+ids <- colnames(scaled_tpm)
+column.annotations <- data.frame(Subtype = id_subtype_key$subtype[match(ids, id_subtype_key$id)])
+rownames(column.annotations) <- ids
+column.annotations$Subtype <- factor(column.annotations$Subtype, levels = c("SCLC", "NSCLC"))
+
+# Function for Reordering of heatmap groups [method provuded in Examples section of ?pheatmap]
+callback <-  function(hc, mat) {
+  sv = svd(t(mat))$v[,1]
+  dend = reorder(as.dendrogram(hc), wts = sv)
+  as.hclust(dend)
+}
+
+# Heatmap using TPM values (log scale)
+##pdf(file = "~/Dropbox/Cancer Genomics Lab/LUCAS/subtyping/figures/target_gene_heatmap_tpm.pdf", height  = 5, width = 10)
+pheatmap(log(tpm + 1),
+         labels_row = rep("", nrow(tpm)),
+         labels_col = rep("", ncol(tpm)),
+         annotation_col = column.annotations,
+         clustering_callback = callback,
+         treeheight_row = 0)
+```
+
+

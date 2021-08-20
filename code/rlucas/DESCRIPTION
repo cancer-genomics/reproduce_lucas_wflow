@@ -1,0 +1,21 @@
+Package: rlucas
+Title: Helper functions for lucas analyses
+Version: 0.0.3
+Authors@R: 
+    person(given = "Rob",
+           family = "Scharpf",
+           role = c("aut", "cre"),
+           email = "robscharpf@gmail.com",
+           comment = c(ORCID = "YOUR-ORCID-ID"))
+Description: Serves summarized lucas data.
+License: use_mit_licence()
+Imports: methods,
+	 GenomicRanges,
+	 SummarizedExperiment
+Encoding: UTF-8
+LazyData: true
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.1.1
+Collate: 
+    'functions.R'
+    'help.R'

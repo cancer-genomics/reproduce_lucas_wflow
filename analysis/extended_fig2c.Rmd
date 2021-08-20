@@ -1,0 +1,120 @@
+---
+title: "GC model"
+site: workflowr::wflow_site
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  workflowr::wflow_html:
+    code_folding: hide
+    toc: true
+    toc_depth: 3
+    toc_float: true
+editor_options:
+  chunk_output_type: console
+---
+
+```{r caching, echo=FALSE}
+knitr::opts_chunk$set(autodep = TRUE, warning=FALSE)
+```
+
+
+```{r packages, message=FALSE, warning=FALSE}
+library(RColorBrewer)
+library(SummarizedExperiment)
+library(magrittr)
+library(tidyverse)
+library(ggplot2)
+library(here)
+```
+
+
+```{r gc_models}
+odir <- here("data", "gc_correction.R")
+loess_model <- here(odir, "loess_model.rds") %>%
+    readRDS()
+frag_model <- here(odir, "frag_model.rds") %>%
+    readRDS()
+```
+
+
+```{r loess_ratios}
+loess_ratios <- loess_model %>%
+    ungroup() %>%
+    select(-c(gc, count)) %>%
+    pivot_wider(id_cols=c(lab_id, bin),
+                names_from=size, values_from=loess) %>%
+    mutate(ratio=short/long) %>%
+    mutate(method="Bin-level\nGC model")
+```
+
+```{r frag_ratios}
+frag_model %>%
+    dplyr::rename(lab_id=id) %>%
+    group_by(lab_id) %>%
+    summarize(nbin=length(unique(bin)),
+              .groups="drop")
+
+frag_ratios <- frag_model %>%
+    dplyr::rename(lab_id=id) %>%
+    select(lab_id, bin, short, long, method) %>%
+    mutate(ratio=short/long) %>%
+    mutate(method="Fragment-level\nGC model")
+
+mlevels <- c("Bin-level\nGC model",
+             "Fragment-level\nGC model")
+combined <- bind_rows(loess_ratios, frag_ratios) %>%
+    mutate(method=factor(method, mlevels))
+```
+
+Attach metadata on the samples and metadata on the rows.
+
+```{r bin_metadata}
+##data(pcr_experiment, package="pcr.data")
+load(here("data", "gc_correction.R", "pcr_experiment.rda"))
+rr <- rowRanges(pcr_experiment) %>%
+    as_tibble() %>%
+    select(bin, arm)
+combined2 <- left_join(combined, rr, by="bin")
+```
+
+```{r sample_metadata}
+coldat <- colData(pcr_experiment) %>%
+    as_tibble() %>%
+    dplyr::rename(lab_id=sample) %>%
+    select(lab_id, pcr_cycles)
+combined3 <- left_join(combined2, coldat, by="lab_id")
+```
+
+# Fragmentation profiles
+
+```{r profiles, fig.width=12, fig.height=8, dev=c("png", "pdf")}
+zero_cycle <- combined3 %>%
+    filter(pcr_cycles==0, method==levels(method)[2]) %>%
+    ##filter(arm %in% levels(arm)[1:5]) %>%
+    mutate(method="Zero-cycle\nNo GC correction")
+combined4 <- combined3 %>%
+    mutate(method=as.character(method)) %>%
+    bind_rows(zero_cycle) %>%
+    mutate(method=factor(method, c("Zero-cycle\nNo GC correction", mlevels)),
+           pcr_cycles=as.character(pcr_cycles),
+           pcr_cycles=factor(pcr_cycles, c("0", "4", "12")))
+
+pal <- brewer.pal(n=3, "Dark2") %>%
+    setNames(c("0", "4", "12"))
+pal[1] <- "black"
+
+combined4 %>%
+    filter(arm %in% levels(arm)[1:6]) %>%
+    ggplot(aes(bin, ratio, group=lab_id)) +
+    geom_line(aes(color=pcr_cycles)) +
+    facet_grid(method~arm, space="free", scales="free_x") +
+    scale_color_manual(values=pal) +
+    theme_bw(base_size=17) +
+    theme(panel.grid=element_blank(),
+          strip.text.y=element_text(hjust=0, angle=0),
+          strip.background=element_blank(),
+          legend.position="bottom") +
+    guides(color=guide_legend(title="PCR cycles")) +
+    ylab("Fragmentation profile")
+```
+
+Fragmentation profiles and models for GC correction. Row 1: Short to long ratios for a zero-cycle PCR experiment without GC correction.  As PCR can preferentially amplify fragments by length and GC content, we used a loess model to correct the number of short fragments and number of long fragments in 5 Mb bins along the genome for the 0, 4, and 12-cycle samples.   While the bin-level model reduces biases in coverage from length and GC content by PCR (Row 2), the fragmentation profiles no longer resemble the zero-cycle fragmentation profile. Row 3:  A non-parametric fragment-level model that normalizes coverage by fragment length and GC content to the zero-cycle PCR target distribution.

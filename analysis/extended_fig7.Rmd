@@ -1,0 +1,293 @@
+---
+title: "External validation"
+site: workflowr::wflow_site
+output:
+  workflowr::wflow_html:
+    toc: true
+editor_options:
+  chunk_output_type: console
+---
+
+# ROCs
+```{r load_data, echo=FALSE, include=FALSE}
+library(devtools)
+library(data.table)
+library(caret)
+library(recipes)
+library(magrittr)
+library(tidyr)
+library(purrr)
+library(cowplot)
+library(devtools)
+library(here)
+load_all(here("code", "rlucas"))
+source(here("code", "plot-roc.r"))
+preds <- fread(here("data", "validation_preds.csv"))
+
+##### Plot ROCs
+mytheme <- theme(panel.background=element_rect(fill="white"),
+        strip.background=element_rect(fill="white"),
+        axis.line=element_line(color="black"),
+        plot.title=element_blank(),
+        axis.title=element_text(size=16),
+        axis.text=element_text(size=14),
+        strip.text=element_text(size=15),
+        legend.position="none")
+
+valid_meta <- setDT(valid_meta)
+valid_meta <- valid_meta[ref_panel != TRUE]
+preds <- valid_meta[preds, nomatch=NULL, on="id"]
+setnames(preds, "Sample type", "type")
+setnames(preds, "standarized_subtype", "histology")
+preds[,histology:=tolower(histology)]
+preds[,histology:=ifelse(type=="healthy", "cancer-free", histology)]
+preds[,Stage:=ifelse(grepl("^III$|^IV$", Stage), "III/IV", Stage)]
+preds[,Stage:=ifelse(type=="healthy", "cancer-free", Stage)]
+```
+
+```{r plotroc, echo=FALSE,  fig.height=6, fig.width=18,dev=c("png", "pdf")}
+preds[,type:=factor(type, c("healthy", "cancer"))]
+roc <- pROC::roc
+mainroc <- preds[,rocstats(type, cancer)]
+
+p <- plotrocs(mainroc, mytheme=mytheme, textsize=5.5, facet=FALSE) + ggtitle("") + mytheme
+
+rocI <- preds[grepl("cancer-free|^I$", Stage)][,rocstats(type, cancer)]
+rocII <- preds[grepl("cancer-free|^II$", Stage)][,rocstats(type, cancer)]
+rocIII <- preds[grepl("cancer-free|^III/IV$", Stage)][,rocstats(type, cancer)]
+
+rocI[,features:="I"]
+rocII[,features:="II"]
+rocIII[,features:="III/IV"]
+rocstage <- rbind(rocI, rocII, rocIII)
+pstage <- plotrocs(rocstage, mytheme=mytheme) + ggtitle("")
+
+roc.adeno <- preds[grepl("cancer-free|^adenocarcinoma$", histology)][,rocstats(type, cancer)]
+roc.large <- preds[grepl("cancer-free|^large cell$", histology)][,rocstats(type, cancer)]
+roc.squamous <- preds[grepl("cancer-free|^squamous$", histology)][,rocstats(type, cancer)]
+
+roc.adeno[,features:="Adeno"]
+roc.large[,features:="Large cell"]
+roc.squamous[,features:="Squamous"]
+rochistology <- rbind(roc.adeno, roc.large, roc.squamous)
+
+phist <- plotrocs(rochistology, mytheme=mytheme, facet=TRUE)
+
+phist <- phist + theme(axis.title.y=element_blank())
+pstage <- pstage + theme(axis.text.x=element_blank(),
+                         axis.ticks.x=element_blank(),
+                         axis.title=element_blank())
+
+p2 <- plot_grid(pstage, phist, nrow=2, align="v")
+pg <- plot_grid(p, p2, ncol=2, rel_widths=c(1, 1.5))
+pg
+# only save by stage
+```
+
+# Figure 3c: 
+
+```{r performance, echo=FALSE}
+ext_pred <- as_tibble(preds) %>%
+    rename(score.seq=cancer)
+data(prediction_lucas, package="rlucas")
+meta <- as_tibble(meta)
+lucas_pred <- preds %>%
+    left_join(meta, by="id") %>%
+    set_colnames(tolower(colnames(.))) %>%
+    mutate(type=ifelse(assigned_group==2, "healthy",
+                       "cancer"),
+           type=factor(type, levels=c("healthy", "cancer"))) %>%
+    mutate(stage=ifelse(grepl("^III$|^IV$", stage), "III/IV", stage))
+
+## cutoff for 80% specificity in lucas
+library(cutpointr)
+roc <- cutpointr::roc
+sp <- c(0.7, 0.75, 0.8, 0.85)
+lucasCutoff <- function(desired_specificity, pred){
+    lucas_cutoff <- pred %>%
+        roc(x = score.seq, class = type,
+            pos_class="cancer",
+            neg_class="healthy",
+            direction = ">=") %>%
+        mutate(sens=tp/(tp+fn),
+               spec=1-fpr) %>%
+        filter(spec >= desired_specificity, is.finite(x.sorted)) %>%
+        pull(x.sorted) %>%
+        min()
+    lucas_cutoff
+}
+
+cutoffs <- sp %>%
+    map_dbl(lucasCutoff, pred=lucas_pred)
+lucas.cancer  <- lucas_pred %>%
+    filter(type=="cancer")
+lucas.list <- split(lucas.cancer, lucas.cancer$stage)
+##lucas.list %>%
+##    map_dfr(sensitivityStats, cutoff=cutoffs[1])
+sens_lucas <- cutoffs %>%
+    map_dfr(sensitivityByStage, lucas.list) %>%
+    mutate(specificity=rep(sp, each=3)) %>%
+    mutate(set="Training set (LUCAS)")
+##sens_lucas <- lucas.list %>%
+##    map_dfr(sensitivityStats, cutoff=lucas_cutoff) %>%
+##    mutate(set="Training set (LUCAS)")
+
+ext.cancer <- ext_pred %>%
+    filter(type=="cancer") %>%
+    rename(stage=Stage)
+ext.list <- split(ext.cancer, ext.cancer$stage)
+sens_ext <- cutoffs %>%
+    map_dfr(sensitivityByStage, ext.list) %>%
+    mutate(specificity=rep(sp, each=3)) %>%
+    mutate(set="Validation set")
+sens <- bind_rows(sens_lucas,
+                  sens_ext)
+
+ext.healthy <- ext_pred %>%
+    filter(type=="healthy") %>%
+    rename(stage=Stage)
+spec_ext <- cutoffs %>%
+    map_dfr(specificityStats, x=ext.healthy) %>%
+    mutate(specificity=sp) %>%
+    rename(performance=spec) %>%
+    mutate(statistic="specificity") %>%
+    mutate(stage="healthy",
+           set="Validation set")
+
+sens2 <- sens %>%
+    rename(performance=sens) %>%
+    mutate(statistic="sensitivity")
+
+combined <- sens2 %>%
+    select(performance, specificity, stage, set, statistic, `0.05%`, `0.95%`) %>%
+    bind_rows(select(spec_ext, performance, specificity, stage, set, statistic, `0.05%`, `0.95%`))
+
+xlabels <- filter(sens, specificity==0.7) %>%
+    group_by(stage) %>%
+    summarize(n=paste(n, collapse=" | "),
+              .groups="drop") %>%
+    mutate(n=paste0("(", n, ")")) %>%
+    unite("label", c(stage, n), sep=" ") %>%
+    pull(label)
+
+lucas.healthy <- lucas_pred %>% filter(type=="healthy")
+xlabels2 <- paste0("Non-cancer (", nrow(lucas.healthy), " | ",
+                   nrow(ext.healthy), ")")
+
+sensValidation <- function(spec_cutoff, x, xlabels) {
+    x %>%
+        filter(specificity==spec_cutoff, statistic=="sensitivity") %>%
+        ggplot(aes(stage, performance)) +
+        geom_hline(yintercept=1, linetype="dashed") +
+        geom_errorbar(aes(ymin=`0.05%`, ymax=`0.95%`,
+                          color=set), width=0.1,
+                      position=position_dodge(0.2)) +
+        geom_point(size=3, shape=21,
+                   aes(color=set,
+                       fill=set),
+                   position=position_dodge(0.2)) +
+        theme_classic(base_size=20) +
+        theme(legend.position=c(0.7, 0.25),
+              legend.text=element_text(size=15),
+              panel.background=element_rect(fill="white",
+                                            color="gray30"),
+              panel.grid=element_blank(),
+              axis.text.y=element_blank(),
+              axis.ticks.y=element_blank()) +
+        scale_color_manual(values=c("gray30", "steelblue")) +
+        scale_fill_manual(values=c("gray30", "steelblue")) +    
+        ylab("") +
+        xlab("") +
+        scale_y_continuous(labels=scales::percent_format(accuracy=1),
+                           limit=c(0, 1)) +
+        scale_x_discrete(labels=xlabels) +
+        ##guides(fill=guide_legend(title=""), color=guide_legend(title="")) +
+        guides(fill=FALSE, color=FALSE) +
+        xlab("") 
+
+}
+
+specValidation <- function(spec_cutoff, x, xlabels){
+    x %>%
+        filter(specificity==spec_cutoff, statistic=="specificity") %>%    
+        pivot_longer(cols=c(performance, specificity),
+                     names_to="perf", values_to="stat") %>%
+        mutate(set=c("Valdation set", "Training set (LUCAS)")) %>%
+        mutate(`0.05%`=ifelse(set=="Training set (LUCAS)", stat, `0.05%`),
+               `0.95%`=ifelse(set=="Training set (LUCAS)", stat, `0.95%`)) %>%
+        ggplot(aes(stage, stat))  +
+        geom_hline(yintercept=1, linetype="dashed") +
+        geom_errorbar(aes(ymin=`0.05%`, ymax=`0.95%`,
+                          color=set), width=0.1,
+                      position=position_dodge(0.5)) +
+        geom_point(size=3, shape=21,
+                   aes(color=set,
+                       fill=set),
+                   position=position_dodge(0.5)) +
+        theme_classic(base_size=20) +
+        theme(legend.position=c(0.5, 0.25),
+              legend.text=element_text(size=15),
+              panel.background=element_rect(fill="white",
+                                            color="gray30"),
+              panel.grid=element_blank()) +
+        scale_color_manual(values=c("gray30", "steelblue")) +
+        scale_fill_manual(values=c("gray30", "steelblue")) +    
+        ylab("") +
+        xlab("") +
+        scale_x_discrete(labels=xlabels) +
+        scale_y_continuous(labels=scales::percent_format(accuracy=1),
+                           breaks=c(0, 0.5, spec_cutoff, 1),
+                           limit=c(0, 1)) +
+        ##scale_x_discrete(labels=xlabels) +
+        guides(fill=FALSE, color=FALSE)
+}
+sens.figs <- sp %>%
+    map(sensValidation, combined, xlabels=xlabels)
+
+sens.figs[[1]] <- sens.figs[[1]] +
+    guides(fill=guide_legend(title=""), color=guide_legend(title=""))
+
+spec.figs <- sp %>%
+    map(specValidation, combined, xlabels=xlabels2)
+spec.figs[[1]] <- spec.figs[[1]] +
+    guides(fill=guide_legend(title=""), color=guide_legend(title=""))
+library(grid)
+library(gridExtra)
+lo <- grid.layout(nrow=4, ncol=2, width=unit(c(0.3, 0.7), "npc"))
+```
+
+```{r extended_fig5, fig.width=14, fig.height=14, dev=c("png", "pdf")}
+grid.newpage()
+pushViewport(viewport(width=unit(0.95, "npc"),
+                      height=unit(0.95, "npc")))
+pushViewport(viewport(layout=lo))
+pushViewport(viewport(layout.pos.row=1, layout.pos.col=1))
+print(spec.figs[[1]], newpage=FALSE)
+popViewport()
+pushViewport(viewport(layout.pos.row=1, layout.pos.col=2))
+print(sens.figs[[1]], newpage=FALSE)
+popViewport()
+pushViewport(viewport(layout.pos.row=2, layout.pos.col=1))
+print(spec.figs[[2]], newpage=FALSE)
+popViewport()
+pushViewport(viewport(layout.pos.row=2, layout.pos.col=2))
+print(sens.figs[[2]], newpage=FALSE)
+popViewport()
+pushViewport(viewport(layout.pos.row=3, layout.pos.col=1))
+print(spec.figs[[3]], newpage=FALSE)
+popViewport()
+pushViewport(viewport(layout.pos.row=3, layout.pos.col=2))
+print(sens.figs[[3]], newpage=FALSE)
+popViewport()
+pushViewport(viewport(layout.pos.row=4, layout.pos.col=1))
+print(spec.figs[[4]], newpage=FALSE)
+popViewport()
+pushViewport(viewport(layout.pos.row=4, layout.pos.col=2))
+print(sens.figs[[4]], newpage=FALSE)
+popViewport(3)
+grid.text("Performance", x=unit(0.018, "npc"), y=unit(0.5, "npc"),
+          rot=90, gp=gpar(cex=1.8))
+grid.text("Specificity", x=unit(0.21, "npc"), y=unit(0.99, "npc"), gp=gpar(cex=1.8))
+grid.text("Sensitivity", x=unit(0.66, "npc"), y=unit(0.99, "npc"), gp=gpar(cex=1.8))
+```
+

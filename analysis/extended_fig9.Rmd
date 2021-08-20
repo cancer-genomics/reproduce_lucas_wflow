@@ -1,0 +1,274 @@
+---
+title: "Distribution of DELFI multi-modal scores by stage and histology"
+site: workflowr::wflow_site
+output:
+  workflowr::wflow_html:
+    code_folding: hide
+    toc: true
+editor_options:
+  chunk_output_type: console
+---
+
+
+```{r caching, echo=FALSE}
+knitr::opts_chunk$set(autodep = TRUE, echo=FALSE)
+```
+
+# Extended Figure 9
+
+```{r load_data, echo=FALSE, include=FALSE}
+library(SummarizedExperiment)
+library(devtools)
+library(magrittr)
+library(stringr)
+library(tidyverse)
+library(grid)
+library(lemon)
+library(gridExtra)
+library(cowplot)
+library(data.table)
+library(pROC)
+library(RColorBrewer)
+library(here)
+load_all(here("code","rlucas"))
+data(se, package="rlucas")
+source(here("code", "plot-roc.r"))
+rename <- dplyr::rename
+```
+
+```{r scores}
+model_levels <- "LUCAS cohort"
+dat1 <- colData(se) %>%
+    as_tibble() %>%
+    mutate(lab_id=colnames(se)) %>%
+    filter(!is.na(score_full_lasso2)) %>%
+    select(lab_id, score_full_lasso2) %>%
+    set_colnames(c("lab_id", "score")) %>%
+    mutate(training_model=model_levels[1])
+check <- left_join(dat1, fig3_clindat(se), by="lab_id") %>%
+    mutate(cancer=ifelse(!is.na(stage), "yes", "no"),
+           cancer=factor(cancer, c("no", "yes")))
+```
+
+```{r trainingsets, fig.width=12, fig.height=8, dev=c("png", "pdf")}
+clindat <- colData(se) %>%
+    as_tibble() %>%
+        mutate(lab_id=colnames(se)) %>%
+    mutate(training_set1=ifelse(is.na(score_full_lasso2), 0, 1),
+           nsets=training_set1) %>%
+    filter(nsets > 0) %>%
+    mutate(histology=as.character(histology),
+           stage=as.character(stage),
+           histology=ifelse(histology=="Metastasis from another primary cancer",
+                                "Lung metastasis", histology)) %>%
+    select(lab_id, histology, patient_type, stage, hist_dx,
+           assigned_group,
+           age,
+           training_set1)
+set1 <- filter(clindat, training_set1==1) %>%
+    mutate(set="A")
+cohorts <- set1 %>%
+    group_by(set, patient_type) %>%
+    summarize(n=length(unique(lab_id)),
+              .groups="drop") %>%
+    mutate(cancer=ifelse(patient_type %in% c("benign", "no baseline cancer"),
+                         "Non-cancer", "Cancer"))
+```
+
+
+```{r categories}
+source(here("code", "plot-roc_with_e9.R"))
+combined <- extfig9_data(se, dat1, model_levels)
+```
+
+```{r efig9A,dev=c("png", "pdf")}
+##color <- brewer.pal(3, "Dark2")[1]
+color <- "steelblue"
+##names(colors) <- model_levels
+N <- combined %>%
+    group_by(category, training_model) %>%
+    summarize(n=length(unique(lab_id)),
+              .groups="drop")
+N$n[1] <- "n=91"
+A <- combined %>%
+    ggplot(aes(category, score, fill=training_model)) +
+    geom_jitter(aes(fill=training_model), width=0.1,
+                pch=21, alpha=0.5, size=0.7,
+               color="gray") +
+    geom_boxplot(outlier.shape=NA, alpha=0.3,
+                 width=0.3) +
+    theme_classic(base_size=20) +
+    theme(panel.grid=element_blank(),
+          legend.justification=c("left", "bottom"),
+          strip.background=element_blank()) +
+    scale_y_continuous(expand=expansion(add=c(0.01, 0.1)),
+                       breaks=seq(0, 1, by=0.2),
+                       labels=as.character(seq(0, 1, by=0.2))) +
+    xlab("") +
+    ylab("DELFI score") +
+    scale_fill_manual(values=color) +
+    guides(fill=FALSE, color=FALSE) +
+    geom_text(data=N, aes(category, 1.04, label=n, group=training_model),
+              size=4,
+              position=position_dodge(width=0.5),
+              color="gray25")
+##    annotate("text", 0.70, y=1.043, label="n", size=4.5)
+```
+
+
+```{r performance_data, warning=FALSE, message=FALSE,dev=c("png", "pdf")}
+category_levels <- c("No biopsy",
+                     "Benign nodule",
+                     "I", "II", "III", "IV",
+                     "Adenocarcinoma", "Squamous",
+                     "SCLC", "Lung metastasis")
+nocancer_labels <- c("no baseline cancer", "benign",
+                     "no lung cancer, other cancer",
+                     "no lung cancer, later lung cancer")
+clindat <- fig3_clindat(se)
+overall <- ##bind_rows(dat1, dat2, dat3) %>%
+    dat1 %>%
+    mutate(training_model=factor(training_model, model_levels)) %>%
+    left_join(clindat, by="lab_id") %>%
+    mutate(class=ifelse(patient_type %in% nocancer_labels, "No cancer",
+                         "Cancer"),
+           class=factor(class, c("No cancer", "Cancer")))
+overall.list <- split(overall, overall$training_model)
+roc_overall  <-  overall.list %>%
+    map_dfr(performance) %>%
+    mutate(category="Overall")
+roc_strata <- extfig9_roc(se, dat1, model_levels)
+roc_overall2 <- roc_overall %>%
+    mutate(training_model=as.character(training_model),
+           auc=format(round(auc, 2), nsmall=2),
+           lower=format(round(lower, 2), nsmall=2),
+           upper=format(round(upper, 2), nsmall=2),
+           auc_label=paste0(auc, " (", lower, "-", upper, ")"),
+           auc_label=factor(auc_label, unique(auc_label)))
+```
+
+```{r overall, warning=FALSE, message=FALSE,dev=c("png", "pdf")}
+roc_colors <- color %>%
+    setNames(levels(roc_overall2$auc_label))
+B <- roc_overall2 %>%
+    ggplot(aes(spec, sens, group=auc_label)) +
+    geom_vline(xintercept=0.80,
+               color="gray80", size=0.5, linetype="dashed") +
+    geom_line(aes(color=auc_label), size=1.1) +
+    scale_x_reverse(expand=c(0, 0.01),
+                    breaks=c(0, 0.25, 0.5, 0.80, 1),
+                    labels=as.character(
+                        c("0", ".25", ".50", ".80", "1.0"))) +
+    scale_y_continuous(expand=c(0, 0.01),
+                       breaks=c(0, 0.25, 0.5, 0.75, 1),
+                       labels=as.character(
+                           c("0", ".25", ".50", ".75", "1.0"))) +
+    scale_color_manual(values=roc_colors) +
+    theme_classic(base_size=20) +
+    theme(panel.grid=element_blank(),
+          legend.position=c(0.6, 0.2),
+          aspect.ratio=0.8,
+          legend.text.align=1,
+          legend.title=element_text(size=16)) +
+    xlab("Specificity") + ylab("Sensitivity") +
+    guides(color=guide_legend(title="AUC: (95% CI)", hjust=1))
+```
+
+```{r roc_categories, warning=FALSE, message=FALSE,dev=c("png", "pdf")}
+roc_strata2 <- roc_strata %>%
+    mutate(training_model=as.character(training_model),
+           auc=format(round(auc, 2), nsmall=2),
+           lower=format(round(lower, 2), nsmall=2),
+           upper=format(round(upper, 2), nsmall=2),
+           auc_label=paste0(auc, " (", lower, "-", upper, ")"),
+           auc_label=factor(auc_label, unique(auc_label)))
+models <- model_levels
+legends <- roc_strata2 %>%
+    select(category, training_model, auc_label) %>%
+    distinct() %>%
+    mutate(training_model=factor(training_model, unique(training_model)),
+           training_model=fct_rev(training_model),
+           x=0.7,
+           xend=0.75,
+           y=c(0.1, 0.2, 0.3)[as.integer(training_model)])
+C2 <- roc_strata2 %>%
+    mutate(training_model=factor(training_model, models)) %>%
+    ggplot(aes(spec, sens, group=training_model)) +
+    geom_vline(xintercept=0.80,
+               color="gray80", size=0.5, linetype="dashed") +
+    geom_line(aes(color=training_model), size=1) +
+    scale_x_reverse(expand=c(0, 0.01),
+                    breaks=c(0, 0.25, 0.5, 0.80, 1),
+                    labels=as.character(
+                        c("0", ".25", ".50", ".80", "1.0"))) +
+    scale_y_continuous(expand=c(0, 0.01),
+                       labels=as.character(
+                           c("0", ".25", ".50", ".75", "1.0"))) +
+    geom_segment(data=legends, aes(x=x, xend=xend,
+                                   y=y, yend=y,
+                                   color=training_model),
+                 size=1,
+                 inherit.aes=FALSE) +
+    geom_text(data=legends, aes(x=xend, y=y, label=auc_label),
+              nudge_x=0.09, hjust=0,
+              size=5) +
+    theme_classic(base_size=20) +
+    scale_color_manual(values=color) +
+    theme(panel.background=element_blank(),
+          panel.grid=element_blank(),
+          legend.position="none",
+          ##legend.position=c(0.8, 0.2),
+          axis.line.x.bottom=element_line(color="black"),
+          strip.background=element_blank(),
+          aspect.ratio=0.95) +
+    xlab("Specificity") + ylab("Sensitivity") +
+    guides(color=guide_legend(title="")) +
+    facet_rep_wrap(~category, nrow=2)
+```
+
+
+```{r extfig9, fig.width=25, fig.height=14, dev=c("png", "pdf")}
+w <- c(0.65, 0.35) %>%
+    "/"(sum(.))
+overall.lo <- grid.layout(nrow=2, ncol=2,
+                          widths=unit(w, "npc"),
+                          heights=unit(c(0.35, 0.65),
+                                       "npc"))
+grid.newpage()
+pushViewport(viewport(layout=overall.lo))
+pushViewport(viewport(layout.pos.row=1, layout.pos.col=1))
+pushViewport(viewport(y=unit(0.98, "npc"),
+                      height=unit(0.94, "npc"),
+                      width=unit(0.98, "npc"),
+                      just="top"))
+print(A, newpage=FALSE)
+popViewport(2)
+## Top-right
+pushViewport(viewport(layout.pos.row=1, layout.pos.col=2))
+pushViewport(viewport(x=unit(-0.05, "npc"),
+                      y=unit(1, "npc"),
+                      height=unit(0.97, "npc"),
+                      width=unit(1, "npc"),
+                      just=c("left", "top")))
+print(B, newpage=FALSE)
+## Row 2
+popViewport(2)
+pushViewport(viewport(layout.pos.row=2, layout.pos.col=c(1, 2)))
+pushViewport(viewport(x=unit(1, "npc"),
+                      y=unit(0.99, "npc"),
+                      height=unit(1, "npc"),
+                      width=unit(1.3, "npc"),
+                      just=c("right", "top")))
+print(C2, newpage=FALSE)
+popViewport(2)
+grid.text("a",
+          x=unit(0.01, "npc"), y=unit(0.985, "npc"),
+          gp=gpar(cex=2.5))
+grid.text("b",
+          x=unit(0.68, "npc"), y=unit(0.985, "npc"),
+          gp=gpar(cex=2.5))
+grid.text("c",
+          x=unit(0.01, "npc"), y=unit(0.65, "npc"),
+          gp=gpar(cex=2.5))
+
+```

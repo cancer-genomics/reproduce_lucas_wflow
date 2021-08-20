@@ -1,0 +1,138 @@
+---
+title: "Relative fragment size plot and ROC for SCLC vs. other comparison"
+site: workflowr::wflow_site
+output:
+  workflowr::wflow_html:
+    code_folding: hide
+    toc: true
+editor_options:
+  chunk_output_type: console
+---
+
+
+```{r caching, echo=FALSE}
+knitr::opts_chunk$set(autodep = TRUE, echo=FALSE)
+```
+
+
+```{r load_data, echo=FALSE, include=FALSE}
+library(dplyr)
+library(ggplot2)
+library(pROC)
+library(here)
+```
+
+
+```{r}
+df <- read.table(here("data", "sclc_vs_other_fragment_size.txt"),
+                 header = TRUE, stringsAsFactors = FALSE)
+
+# Plotting relative fragment size for all samples separately
+df$grp <- factor(df$grp, levels = c("Other", "SCLC"))
+id_ord <- c(unique(subset(df, grp == "Other")$id), unique(subset(df, grp == "SCLC")$id))
+df$id <- factor(df$id, levels = id_ord)
+
+# Plotting the non-SCLC group as the median and the 0.05 and 0.95 quantiles
+q.df <- df %>%
+          filter(grp != "SCLC") %>%
+          group_by(pos) %>%
+          summarise(q5 = quantile(rel_size, 0.05),
+                    m = median(rel_size),
+                    q95 = quantile(rel_size, 0.95)) %>%
+          as.data.frame
+
+sclc.df <- subset(df, grp == "SCLC")
+
+# Adding the median of the 'Other' group to sclc.df
+median.df <- data.frame(id = "Other_median",
+                        grp = "Other",
+                        pos = q.df$pos,
+                        size = NA,
+                        rel_size = q.df$m)
+sclc.df <- rbind(median.df, sclc.df)
+sclc.df$grp <- factor(sclc.df$grp, levels = c("SCLC", "Other"))
+
+# Plotting the relative fragment size at the TFBS
+p <- ggplot(sclc.df, aes(x = pos, y = rel_size, color = grp, group = id)) +
+       geom_ribbon(data = q.df, aes(x = pos, ymin = q5, ymax = q95), inherit.aes = FALSE, alpha = 0.5, color = NA, fill = "grey50") +
+       geom_smooth(aes(color = grp), method = "loess", span = 0.2, se = FALSE, alpha = 0.8) +
+       cowplot::theme_cowplot() +
+       geom_vline(xintercept = 0, linetype = "dashed", color = "grey") +
+       ylim(c(1, 1.01)) +
+       ylab("Relative fragment size") +
+       xlab("Position relative to TFBS (bp)") +
+       scale_color_manual(values = c(SCLC = "slateblue", Other = "black")) +
+       theme(legend.title = element_blank(),
+             legend.position = c(0.7, 0.7))
+```
+
+
+```{r tfbs_fragment_size_sclc_vs_other, fig.width = 8, fig.height = 4, dev = c("png", "pdf")}
+p
+
+#ggsave(p, filename = "~/Dropbox/Cancer Genomics Lab/LUCAS/subtyping/figures/tfbs_fragment_size_sclc_vs_other.pdf",
+#       height = 4, width = 8)
+```
+
+
+```{r}
+# Computing a relative fragment size metric for each sample for the ROC curve
+ctl_pos <- c(-1000:-1500, 1000:1500)
+dip_pos <- -100:100
+summary.df <- data.frame(id = character(0),
+                         grp = character(0),
+                         rel_size = character(0))
+cg_ids <- as.character(unique(df$id))
+for (i in 1:length(cg_ids)) {
+  z <- subset(df, id == cg_ids[i])
+  rel_size <- ( sum(z$size[z$pos %in% dip_pos]) / length(dip_pos) ) / ( sum(z$size[z$pos %in% ctl_pos]) / length(ctl_pos) )
+  tmp.summary.df <- data.frame(id = cg_ids[i],
+                               grp = unique(df$grp[df$id == cg_ids[i]]),
+                               rel_size = rel_size)
+  summary.df <- rbind(summary.df, tmp.summary.df)
+}
+
+# Creating the ROC curve
+roc.res <- pROC::roc(summary.df$grp, summary.df$rel_size,ci = TRUE)
+```
+
+
+```{r roc_fragment_size_sclc_vs_other, fig.width = 5, fig.height = 5, dev = c("png", "pdf")}
+dat <- tibble(sens=roc.res$sensitivities,
+              spec=roc.res$specificities) %>%
+    arrange(sens)
+ci_roc <- roc.res$ci
+roc_label <- paste0("AUC: ", round(roc.res$auc[[1]], 2),
+                    " (",
+                    round(ci_roc[[1]], 2),
+                    "-",
+                    round(ci_roc[[2]], 2),
+                    ")")
+dat %>%
+    ggplot(aes(spec, sens)) + 
+    geom_vline(xintercept=0.80,
+               color="gray80", size=0.5, linetype="dashed") +
+    geom_line(size=1.1) +
+    scale_x_reverse(expand=c(0, 0.01),
+                    breaks=c(0, 0.25, 0.5, 0.80, 1),
+                    labels=as.character(
+                         c("0", ".25", ".50", ".80", "1.0"))) +
+    scale_y_continuous(expand=c(0, 0.01),
+                       breaks=c(0, 0.25, 0.5, 0.75, 1),
+                       labels=as.character(
+                           c("0", ".25", ".50", ".75", "1.0"))) +
+    theme_classic(base_size=20) +
+    theme(panel.grid=element_blank(),
+          legend.position=c(0.6, 0.2),
+          aspect.ratio=0.8,
+          legend.text.align=1,
+          legend.title=element_text(size=16)) +
+    xlab("Specificity") + ylab("Sensitivity") +
+    annotate("text", x=0.3, y=0.3, label=roc_label,
+             size=5)
+#pdf(file = "~/Dropbox/Cancer Genomics Lab/LUCAS/subtyping/figures/roc_fragment_size_sclc_vs_other.pdf", width = 5, height = 5)
+##plot(roc.res, print.auc = TRUE, print.auc.x = 0.5, print.auc.y = 0.35, print.auc.pattern = "AUC: %.2f (%.2f-%.2f)")
+#dev.off()
+```
+
+

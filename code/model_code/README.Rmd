@@ -1,0 +1,29 @@
+---
+title: "ML models evaluated"
+author: "Rob Scharpf"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: html_document
+---
+
+```{r message=FALSE, echo=FALSE}
+library(tidyverse)
+library(kableExtra)
+library(here)
+```
+
+
+```{r models}
+here("data", "models.csv") %>%
+    read_csv() %>%
+    kbl() %>%
+    kable_styling(full_width=FALSE)
+```
+
+I believe the only two models of interest are `seq` and `full_lasso2`.  For the `seq` model, we had three different training/testing cohorts:
+
+1. the LUCAS cohort (158 non-cancer, 129 cancer)
+2. the LUCAS cohort excluding prior cancers
+3. the LUCAS cohort excluding prior cancers and limited to 50-80 yo smokers.
+
+
+We should define a `cohort1`, `cohort2`, and `cohort3` indicator variables in the summarized experiment object in the `rlucas` package. These variables should take the value 1 for samples included in the cohort and 0 otherwise.  The `seq` model based on cohort 1 above was externally validated.  We should include the code for the validation in the workflowr project as well.

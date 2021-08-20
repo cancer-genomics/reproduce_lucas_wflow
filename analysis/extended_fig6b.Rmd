@@ -1,0 +1,43 @@
+---
+title: "Fragment lengths"
+site: workflowr::wflow_site
+output:
+  workflowr::wflow_html:
+    code_folding: hide
+    toc: true
+editor_options:
+  chunk_output_type: console
+---
+
+
+```{r caching, echo=FALSE}
+knitr::opts_chunk$set(autodep = TRUE, echo=FALSE)
+```
+
+
+```{r packages, echo=FALSE, fig.width=6, fig.height=6,dev=c("png", "pdf")}
+library(pROC)
+library(readxl)
+library(here)
+
+ichor_fragm_length_DELFI <- read_excel(here("data","ichor, fragm length DELFI.xlsx"))
+a<-ichor_fragm_length_DELFI
+b<-roc(a$cancer, a$score.seq,plot=TRUE, legacy.axes=FALSE,auc=TRUE,ci=TRUE)
+c<-roc(a$cancer,a$ichor,plot=TRUE, legacy.axes=FALSE,auc=TRUE,ci=TRUE)
+d<-roc(a$cancer,a$`Fragment length`,plot=TRUE, legacy.axes=FALSE,auc=TRUE,ci=TRUE)
+
+plot(b,print.auc=FALSE, print.auc.x=0.7, print.auc.y=0.1, add=FALSE, xlab="Specificity", ylab="", col="steelblue",cex.lab=2,legacy.axes=FALSE,lty=1,lwd=2, font.axis=1, cex.axis=2, yaxt="n", identity.col="grey", identity.lty="dashed", identity.lwd=1, ci=TRUE, ci.col="black")
+plot(b,print.auc=TRUE, print.auc.x=0.7, print.auc.y=0.25, add=TRUE,col="steelblue",xlab="Specificity",ylab=" ", cex.lab=2,legacy.axes=FALSE,lty=1,lwd=2, font.axis=1, cex.axis=2, yaxt="n", identity.col="grey", identity.lty="dashed", identity.lwd=1, ci=TRUE, ci.col="black")
+plot(c,print.auc=TRUE, print.auc.x=0.7, print.auc.y=0.15, add=TRUE,col="red",xlab="Specificity",ylab=" ", cex.lab=2,legacy.axes=FALSE,lty=1,lwd=2, font.axis=1, cex.axis=2, yaxt="n", identity.col="grey", identity.lty="dashed", identity.lwd=1, ci=TRUE, ci.col="black")
+plot(d,print.auc=TRUE, print.auc.x=0.7, print.auc.y=0.05, add=TRUE,col="grey",xlab="Specificity",ylab=" ", cex.lab=2,legacy.axes=FALSE,lty=1,lwd=2, font.axis=1, cex.axis=2, yaxt="n", identity.col="grey", identity.lty="dashed", identity.lwd=1, ci=TRUE, ci.col="black")
+
+
+ytick<-seq(0,1,by=0.1)
+xtick<-seq(0,1,by=0.1)
+axis(side=2, at=ytick, labels =c(0, 0.1, 0.2, 0.3, 0.4, 0.5,0.6,0.7, 0.8, 0.9, 1.0),font.axis=1, cex.axis=2, las=2)
+abline(v=c(0.95, 0.90, 0.8), col=c("grey"), lty=c("dashed"))
+legend("bottom",
+       legend=c("DELFI", "ichorCNA", "Median frag length"),
+       col=c("steelblue", "red", "grey"),
+       lwd=5, cex =0.5, xpd = TRUE, horiz = TRUE)
+```

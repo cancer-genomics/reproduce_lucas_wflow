@@ -1,0 +1,334 @@
+---
+title: "Extended data Figure 4"
+site: workflowr::wflow_site
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+    html_document:
+      code_folding: hide
+chunk_output_type: console
+---
+
+
+```{r caching, echo=FALSE}
+knitr::opts_chunk$set(autodep = TRUE)
+```
+
+    
+```{r packages, message=FALSE}
+library(tidyverse)
+library(magrittr)
+library(stringr)
+library(gridExtra)
+library(broom)
+library(SummarizedExperiment)
+library(devtools)
+library(here)
+load_all(here("code", "rlucas"))
+##data(prediction_lucas, package="rlucas")
+##data(metadata, package="rlucas")
+```
+
+# Relationship of DELFI score with smoking and age among non-cancer individuals
+
+Wrangle the data for smoking status:
+
+```{r data-wrangling}
+meta <- colData(se) %>%
+    as_tibble()
+m <- filter(meta, assigned_group == 2) %>%
+    ##set_colnames(tolower(colnames(.))) %>%
+    select(c(pgdx_id, packyears, smoking_status,
+             age, sex, score_seq,
+             copd, autoimmune_dis)) %>%
+    ##left_join(preds, by="id") %>%
+    mutate(packyears=str_replace_all(packyears, "NA", as.character(NA)),
+           packyears=as.numeric(packyears))
+sm_status <- m %>%
+    ##filter(smoking_status != "smoker, stopped under 6 months") %>%
+    mutate(smoking_status=
+               case_when(smoking_status=="smoker, stopped over 6 months" ~"Prior smoker",
+                         smoking_status%in%c("smoker",
+                                             "smoker, stopped under 6 months")~"Current smoker",
+                         smoking_status=="never smoker"~"Never smoker")) %>%
+    mutate(smoking_status=factor(smoking_status, levels=c("Never smoker",
+                                                          "Prior smoker",
+                                                          "Current smoker")))
+Ns <- sm_status %>%
+    group_by(smoking_status) %>%
+    summarize(n=n(), .groups="drop") %>%
+    pull(n)
+Nlabel <- paste0("n=", Ns)
+slevels <- setNames(paste0(levels(sm_status$smoking_status),
+                           "\n", Nlabel),
+                    levels(sm_status$smoking_status))
+sm_status2 <- sm_status %>%
+    mutate(smoking_status2=slevels[smoking_status]) %>%
+    mutate(smoking_status2=factor(smoking_status2,
+                                  levels=slevels)) %>%
+    mutate(group="Smoking status") %>%
+    mutate(smoking_hx=smoking_status2) %>%
+    select(-smoking_status2)
+```
+
+Data-wrangling for smoking levels:
+
+```{r smoking_level}
+sm_pyears <- m %>%
+    filter(packyears!="NA") %>%
+    mutate(packyears=as.numeric(packyears)) %>%
+    mutate(packyears2=ifelse(smoking_status=="never smoker",
+                             "0", packyears),
+           packyears2=ifelse(packyears > 0 & packyears < 30,
+                             "<30", packyears2),
+           packyears2=ifelse(packyears >= 30 & packyears < 50,
+                             ">30", packyears2),
+           packyears2=ifelse(packyears >= 50, ">50",
+                             packyears2),
+           packyears2=factor(packyears2,
+                             levels=c("0",
+                                      "<30",
+                                      ">30",
+                                      ">50")))
+Ns <- sm_pyears %>%
+    group_by(packyears2) %>%
+    summarize(n=n(), .groups="drop") %>%
+    pull(n)
+Nlabel <- paste0("n=", Ns)
+slevels <- setNames(paste0(levels(sm_pyears$packyears2),
+                           "\n", Nlabel),
+                    levels(sm_pyears$packyears2))
+sm_pyears2 <- sm_pyears %>%
+    mutate(packyears3=slevels[packyears2]) %>%
+    mutate(packyears3=factor(packyears3,
+                             levels=slevels)) %>%
+    mutate(group="Pack-years") %>%
+    mutate(smoking_hx=packyears3) %>%
+    select(-c(packyears2, packyears3))
+smoking <- bind_rows(sm_status2,
+                     sm_pyears2) %>%
+    mutate(smoking_hx=factor(smoking_hx,
+                             levels=c(levels(sm_status2$smoking_hx),
+                                      levels(sm_pyears2$smoking_hx)))) %>%
+    mutate(group=factor(group, levels=c("Smoking status", "Pack-years")))
+
+## status
+smoking.list <- split(smoking, smoking$group)
+smoking.status <- split(smoking.list[[1]]$score_seq, droplevels(smoking.list[[1]]$smoking_hx))
+smokelevels <- droplevels(smoking.list[[1]]$smoking_hx)
+summary(aov(smoking.list[[1]]$score_seq ~ smokelevels))
+
+## pack-years
+smoking.status <- split(smoking.list[[2]]$score_seq, droplevels(smoking.list[[2]]$smoking_hx))
+smokelevels <- droplevels(smoking.list[[2]]$smoking_hx)
+summary(aov(smoking.list[[2]]$score_seq ~ smokelevels))
+```
+
+
+Data-wrangling for age groups:
+
+```{r age}
+agecat <- m %>%
+    mutate(age2=ifelse(age < 55, "<55", age),
+           age2=ifelse(age >= 55 & age < 75, "55-74",
+                       age2),
+           age2=ifelse(age >= 75, ">75", age2),
+           age2=factor(age2, levels=c("<55", "55-74", ">75")))
+Ns <- agecat %>%
+    group_by(age2) %>%
+    summarize(n=n(), .groups="drop") %>%
+    pull(n)
+Nlabel <- paste0("n=", Ns)
+slevels <- setNames(paste0(levels(agecat$age2),
+                           "\n", Nlabel),
+                    levels(agecat$age2))
+agecat2 <- agecat %>%
+    mutate(age3=slevels[age2]) %>%
+    mutate(age3=factor(age3,
+                       levels=slevels)) %>%
+    mutate(group="Age")
+summary(aov(agecat2$score_seq ~ agecat2$age3))
+
+summary(aov(agecat2$score_seq ~ agecat2$sex))
+```
+
+```{r smoking_seqmodel, fig.width=15, fig.height=6,dev=c("png", "pdf")}
+ylabel <- expression("DELFI score")
+ggplot(smoking, aes(smoking_hx, score_seq)) +
+    geom_jitter(width=0.1, color="gray", height=0.01) +
+    geom_boxplot(fill="steelblue", alpha=0.3,
+                 outlier.shape=NA, width=0.2) +    
+    theme_classic(base_size=20) +
+    theme(strip.background=element_blank(),
+          strip.placement="outside",
+          strip.text=element_text(size=23)) +
+    facet_wrap(~group,
+               strip.position="bottom",
+               scales="free_x") +
+    scale_y_continuous(breaks = seq(0, 1, by=0.2),
+                       expand=c(0.05, 0.05),
+                       limits=c(0, 1)) +
+    ylab(ylabel) +
+    xlab("")
+smoking2 <- smoking %>%
+    select(score_seq, group, smoking_hx) %>%
+    set_colnames(c("score_seq", "var", "clinical_cov"))
+```
+
+
+
+```{r age_seqmodel, fig.width=10, fig.height=6,dev=c("png", "pdf")}
+demographic <- agecat2 %>%
+    mutate(age3=as.character(age3)) %>%
+    select(age3, score_seq, sex) %>%
+    pivot_longer(c("age3", "sex"),
+                 names_to="var",
+                 values_to="clinical_cov") %>%
+    mutate(var=ifelse(var=="age3", "Age", "Sex"))
+
+#plot without sex, since not in paper
+demo <- agecat2 %>%
+    mutate(age3=as.character(age3)) %>%
+    select(age3, score_seq) %>%
+    pivot_longer(c("age3"),
+                 names_to="var",
+                 values_to="clinical_cov") %>%
+    mutate(var=ifelse(var=="age3", "Age"))
+##ggplot(agecat2, aes(age3, score_seq)) +
+ggplot(demo, aes(clinical_cov, score_seq)) +    
+    geom_jitter(width=0.1, color="gray", height=0.01) +
+    geom_boxplot(fill="steelblue", alpha=0.3,
+                 outlier.shape=NA, width=0.2) +    
+    theme_classic(base_size=20) +
+    theme(strip.background=element_blank(),
+          strip.placement="outside",
+          strip.text=element_text(size=23)) +
+    facet_wrap(~var,
+               strip.position="bottom",
+               scales="free_x") +
+    scale_y_continuous(breaks = seq(0, 1, by=0.2),
+                       expand=c(0.05, 0.05),
+                       limits=c(0,1)) +
+    ylab(ylabel) +
+    xlab("") 
+```
+
+
+# Composite
+
+```{r gridgraphic,fig.width=10, fig.height=6,dev=c("png", "pdf")}
+smoking2 <- smoking2 %>%
+    mutate(variable_type="Smoking history")
+dem2 <- demographic %>%
+    mutate(variable_type="Demographic")
+## co-morbidities
+co_m <- m %>%
+    select(score_seq, copd, autoimmune_dis) %>%
+    mutate(copd=ifelse(copd==1, "COPD", "No COPD"),
+           autoimmune=ifelse(autoimmune_dis==1, "Autoimmune\ndisease",
+                             "No autoimmune\ndisease")) %>%
+    select(-autoimmune_dis) %>%
+    pivot_longer(c(copd, autoimmune),
+                 names_to="var", 
+                 values_to="clinical_cov") %>%
+    mutate(var=case_when(var=="copd" ~ "COPD",
+                         var=="autoimmune" ~ "Autoimmune disease"),
+           variable_type="Comorbidities")
+dat <- bind_rows(smoking2, dem2) %>%
+    bind_rows(co_m)
+
+
+tmp <- dat %>%
+    filter(var %in% c("Smoking status", "Pack-years"))
+uclin <- unique(tmp$clinical_cov)
+levels <- uclin[c(1:4, 6, 5, 7)]
+a <- tmp %>%
+    mutate(clinical_cov=factor(clinical_cov, levels)) %>%
+    mutate(var=factor(var, levels=c("Smoking status", "Pack-years"))) %>%
+    ggplot(aes(clinical_cov, score_seq)) +    
+    geom_jitter(width=0.1, color="gray", height=0.01) +
+    geom_boxplot(fill="steelblue", alpha=0.3,
+                 outlier.shape=NA, width=0.2) +    
+    theme_classic(base_size=20) +
+    theme(strip.background=element_blank(),
+          strip.placement="outside",
+          strip.text=element_text(size=23)) +
+    facet_wrap(~var,
+               strip.position="bottom",
+               scales="free_x") +
+    scale_y_continuous(breaks = seq(0, 1, by=0.2),
+                       expand=c(0.05, 0.05),
+                       limits=c(0,1)) +
+    ylab(ylabel) +
+    xlab("")
+
+dat2 <- filter(dat, var!="Sex")
+sexdat <- filter(dat, var=="Sex")
+labels <- sexdat %>%
+    group_by(clinical_cov) %>%
+    summarize(n=n(), .groups="drop") %>%
+    unite(label, c("clinical_cov", "n"), sep="\nn=") %>%
+    pull(label)
+names(labels) <- c("Female", "Male")
+sexdat$clinical_cov <- labels[sexdat$clinical_cov]
+dat3 <- bind_rows(dat2, sexdat) %>%
+    filter(var %in% c("Age", "Sex"))
+uclin <- unique(dat3$clinical_cov)
+levels <- uclin[ c(3, 2, 1, 4, 5)]
+b <- dat3 %>%
+    mutate(clinical_cov=factor(clinical_cov, levels)) %>%
+    ggplot(aes(clinical_cov, score_seq)) +    
+    geom_jitter(width=0.1, color="gray", height=0.01) +
+    geom_boxplot(fill="steelblue", alpha=0.3,
+                 outlier.shape=NA, width=0.2) +    
+    theme_classic(base_size=20) +
+    theme(strip.background=element_blank(),
+          strip.placement="outside",
+          strip.text=element_text(size=23)) +
+    facet_wrap(~var,
+               strip.position="bottom",
+               scales="free_x") +
+    scale_y_continuous(breaks = seq(0, 1, by=0.2),
+                       expand=c(0.05, 0.05),
+                       limits=c(0,1)) +
+    ylab(ylabel) +
+    xlab("")
+
+dat2 <- filter(dat, !var %in% c("COPD", "Autoimmune disease"))
+cmdat <- filter(dat, var %in% c("COPD", "Autoimmune disease"))
+labels <- cmdat %>%
+    group_by(clinical_cov) %>%
+    summarize(n=n(), .groups="drop") %>%
+    unite(label, c("clinical_cov", "n"), sep="\nn=") %>%
+    pull(label)
+names(labels) <- c("Autoimmune\ndisease", "COPD",
+                   "No autoimmune\ndisease",
+                   "No COPD")
+cmdat$clinical_cov <- labels[cmdat$clinical_cov]
+dat3 <- bind_rows(dat2, cmdat)
+
+c_ <- dat3 %>%
+    filter(var %in% c("COPD", "Autoimmune disease")) %>%
+    mutate(clinical_cov=factor(clinical_cov,
+                               levels=unique(clinical_cov)[c(1, 3, 4, 2)])) %>%
+    ggplot(aes(clinical_cov, score_seq)) +    
+    geom_jitter(width=0.1, color="gray", height=0.01) +
+    geom_boxplot(fill="steelblue", alpha=0.3,
+                 outlier.shape=NA, width=0.2) +    
+    theme_classic(base_size=20) +
+    theme(strip.background=element_blank(),
+          strip.placement="outside",
+          strip.text=element_blank()) +
+          ##strip.text=element_text(size=23)) +
+    facet_wrap(~var,
+               strip.position="bottom",
+               scales="free_x") +
+    scale_y_continuous(breaks = seq(0, 1, by=0.2),
+                       expand=c(0.05, 0.05),
+                       limits=c(0,1)) +
+    ylab(ylabel) +
+    xlab("")
+
+c_
+#grid.arrange(a, b, c_, ncol=1)
+```
+

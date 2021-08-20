@@ -1,7 +1,7 @@
-name: "reproduce_lucas_wflow"
+name: reproduce_lucas_wflow
 output_dir: ../docs
 navbar:
-  title: "reproduce_lucas_wflow"
+  title: reproduce_lucas_wflow
   left:
   - text: Home
     href: index.html
@@ -9,6 +9,10 @@ navbar:
     href: about.html
   - text: License
     href: license.html
+  right:
+  - icon: fa-github
+    text: Source code
+    href: https://github.com/cancer-genomics/reproduce_lucas_wflow
 output:
   workflowr::wflow_html:
     toc: yes

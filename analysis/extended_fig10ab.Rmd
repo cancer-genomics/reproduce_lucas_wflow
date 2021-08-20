@@ -1,0 +1,88 @@
+---
+title: "Relative fragment size plot and ROC for all 11 SCLC cases vs. all healthies"
+site: workflowr::wflow_site
+output:
+  workflowr::wflow_html:
+    code_folding: hide
+    toc: true
+editor_options:
+  chunk_output_type: console
+---
+
+
+```{r caching, echo=FALSE}
+knitr::opts_chunk$set(autodep = TRUE, echo=FALSE)
+```
+
+
+```{r load_data, echo=FALSE, include=FALSE}
+library(dplyr)
+library(ggplot2)
+library(pROC)
+library(here)
+```
+
+
+```{r}
+df <- read.table(here("data", "all_sclc_vs_all_healthy_fragment_size.txt"),
+                 header = TRUE, stringsAsFactors = FALSE, sep = "\t")
+```
+
+```{r}
+# Computing a relative fragment size metric for each sample for the ROC curve
+ctl_pos <- c(-1000:-1500, 1000:1500)
+dip_pos <- -100:100
+
+summary.df <- data.frame(id = character(0),
+                         grp = character(0),
+                         rel_size = character(0))
+cg_ids <- as.character(unique(df$id))
+for (i in 1:length(cg_ids)) {
+  z <- subset(df, id == cg_ids[i])
+  rel_size <- ( sum(z$size[z$pos %in% dip_pos]) / length(dip_pos) ) / ( sum(z$size[z$pos %in% ctl_pos]) / length(ctl_pos) )
+  tmp.summary.df <- data.frame(id = cg_ids[i],
+                               grp = unique(df$grp[df$id == cg_ids[i]]),
+                               rel_size = rel_size)
+  summary.df <- rbind(summary.df, tmp.summary.df)
+}
+
+# Creating an ROC curve for SCLC vs no baseline cancer and benign
+summary.df$grp2 <- ifelse(summary.df$grp == "SCLC", "SCLC", "No cancer")
+roc.res1 <- pROC::roc(summary.df$grp2, summary.df$rel_size, ci = TRUE)
+```
+
+```{r sclc_no_cancer_no_benign, fig.width = 5, fig.height = 5, dev = c("png", "pdf")}
+dat <- tibble(sens=roc.res1$sensitivities,
+              spec=roc.res1$specificities) %>%
+    arrange(sens)
+ci_roc <- roc.res1$ci
+roc_label <- paste0("AUC: ", round(roc.res1$auc[[1]], 2),
+                    " (",
+                    round(ci_roc[[1]], 2),
+                    "-",
+                    round(ci_roc[[2]], 2),
+                    ")")
+dat %>%
+    ggplot(aes(spec, sens)) + 
+    geom_vline(xintercept=0.80,
+               color="gray80", size=0.5, linetype="dashed") +
+    geom_line(size=1.1) +
+    scale_x_reverse(expand=c(0, 0.01),
+                    breaks=c(0, 0.25, 0.5, 0.80, 1),
+                    labels=as.character(
+                        c("0", ".25", ".50", ".80", "1.0"))) +
+    scale_y_continuous(expand=c(0, 0.01),
+                       breaks=c(0, 0.25, 0.5, 0.75, 1),
+                       labels=as.character(
+                           c("0", ".25", ".50", ".75", "1.0"))) +
+    theme_classic(base_size=20) +
+    theme(panel.grid=element_blank(),
+          legend.position=c(0.6, 0.2),
+          aspect.ratio=0.8,
+          legend.text.align=1,
+          legend.title=element_text(size=16)) +
+    xlab("Specificity") + ylab("Sensitivity") +
+    annotate("text", x=0.3, y=0.3, label=roc_label,
+             size=5)
+```
+

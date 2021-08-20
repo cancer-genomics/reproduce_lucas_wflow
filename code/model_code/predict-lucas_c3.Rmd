@@ -1,0 +1,153 @@
+---
+title: "Patients age 50-80 with 20+ pack years"
+author: "Jamie Medina"
+date: "2/9/2021"
+output: html_document
+---
+
+
+```{r background, echo=FALSE, include=FALSE}
+###################################
+# Task: Predict 
+# Created: 012221
+# Due date: Monday 25, 2021 or Tuesday 26, 2021
+#####################################
+library(precrec)
+library(tidyverse)
+library(caret)
+library(pROC)
+library(readxl)
+library(DT)
+library(recipes)
+library(devtools)
+library(data.table)
+library(here)
+```
+
+```{r setup, include=FALSE}
+#Clean out list section
+rm(list=ls());gc()
+```
+
+
+## Reviewer #2 request
+ - "we are looking at reviewer #2 and he is asking us to re-train the model with patients age 50-80 and smoking history of 20 packyears and above. If I provide you with the list of these patients could you retrain the standard model that we have been running for LUCAS (ratios, PCs of z score)? Thank you!" - Slack
+
+# Patients age 50-80, smoking history of 20 packyears and above
+- 203 individuals
+- 91 Cancers, 112 Healthy
+
+# the below analysis also contains updated filtered Patients age 50-80, smoking history of 20+ pys
+
+# Content also includes report4.rmd re-run of model_seq models for ROC plotting in report8.rmd
+
+# Further filtering was done by Dimitrios to exclude prior cancers - slack message - "@Jmedina thank you for running this last iteration of LUCAS samples? These are pts of age 50-80, packyears>20, excluding pts with prior cancer and including patients with no baseline cancer and future cancers as healthies" - Metadata indicated 157 samples in this analysis.
+
+```{r model_seq, echo = FALSE, message=FALSE, warning=FALSE}
+#load meta and fragment data
+lucas.updated <- read_csv(here("data","lucas_5mbs_delfi473.csv"))
+lucas.metadata <- read_excel(here("data","LUCAS_pts_50_80_py20_excluding prior cancers.xlsx"))
+
+lucas <- inner_join(lucas.updated, lucas.metadata, by = c("id"="id"))
+lucas <- lucas %>% filter(chr != "chrX")
+
+length(unique(lucas$id))
+#compile ratio and coverage
+lucas <- lucas %>% group_by(id) %>%
+  mutate(ratio.cor = short.cor/ long.cor,
+         ratio.scaled = scale(ratio.cor),
+         ratiovar = factor(paste0("ratio_", bin), paste0("ratio_",1:473)),
+         cov.cor = short.cor+long.cor,
+         cov.scaled = scale(cov.cor),
+         covvar = factor(paste0("cov_", bin), paste0("cov_",1:473)),
+         status=ifelse(type=="Healthy", "Healthy", "Cancer"))
+
+#zscores
+lucaz <- read_csv(here("data","training-set.csv"))
+lucaz <- lucaz %>% select(id, contains("zscore"))
+colnames(lucaz)
+lucaz
+
+###########################################
+# Append Nature Features
+###########################################
+
+features.l <- lucas %>% ungroup() %>%
+  select(Patient, id, type, status, bin, ratio.scaled, ratiovar, covvar, short.cor, cov.scaled, contains("Z Score"))
+
+#pivot features
+features <- features.l %>% unite("id", id, type) %>% pivot_wider(id, names_from=ratiovar, values_from=c(ratio.scaled)) %>% rowwise() %>% mutate(type = strsplit(id, "_")[[1]][2], id2 = strsplit(id,"_")[[1]][1]) %>% select(id2, type, everything(), -id)
+
+#append in zscores
+features <- cbind(features, as.matrix(lucaz %>% filter(id %in% features$id2) %>%
+                                               group_by() %>%
+                                               select(contains("zscore")) %>%
+                                               distinct()))
+
+dim(features)
+
+
+#######
+# Model implementing newer guidelines
+# Need to change zscores to
+ratio_seq <- recipe(type ~ ., data= features) %>%
+  update_role(id2, new_role = "ID") %>%
+  step_pca(starts_with("ratio_"), prefix = "ratio_pc_", threshold = 0.90) %>%
+  step_corr(all_predictors(), threshold = 0.95) %>%
+  step_nzv(all_predictors())
+
+glmnetGrid <- expand.grid(alpha = 1, lambda = 10^seq(-5, -1, length.out = 100))
+
+### Model Training
+set.seed(1234)
+ctrl <- trainControl(method = "repeatedcv",
+                     number = 5,
+                     repeats = 10,
+                     verboseIter = TRUE,
+                     savePredictions="final",
+                     classProbs=TRUE,
+                     index = createMultiFolds(features$type, 5, 10),
+                     summaryFunction = twoClassSummary)
+
+model_seq <- caret::train(ratio_seq,
+                               data = features,
+                                method = "glmnet",
+                               tuneGrid = glmnetGrid,
+                               trControl = ctrl)
+
+saveRDS(model_seq, "../models_c3/model_seq_glm.rds")
+
+
+###predictions
+
+pred.cov <- model_seq$pred %>%
+    filter(alpha==model_seq$bestTune$alpha, lambda==model_seq$bestTune$lambda) %>%
+    group_by(rowIndex) %>% dplyr::summarize(obs=obs[1], score.seq=mean(Cancer))
+
+pred.cov %>% filter(obs=="Healthy") %>% arrange(desc(score.seq))
+cutoff99.model_opt <- (pred.cov %>% filter(obs=="Healthy") %>% arrange(desc(score.seq)))$score.seq[2]
+cutoff95.model_opt <- (pred.cov%>% filter(obs=="Healthy") %>% arrange(desc(score.seq)))$score.seq[5]
+cutoff90.model_opt <- (pred.cov %>% filter(obs=="Healthy") %>% arrange(desc(score.seq)))$score.seq[9]
+cutoff80.model_opt <- (pred.cov %>% filter(obs=="Healthy") %>% arrange(desc(score.seq)))$score.seq[18]
+pred.cov.final <- pred.cov %>% mutate(detected99 =
+                                                              ifelse(score.seq > cutoff99.model_opt, "Cancer", "Healthy"),
+                                                            detected95 =
+                                                              ifelse(score.seq> cutoff95.model_opt, "Cancer", "Healthy"),
+                                                            detected90 =
+                                                              ifelse(score.seq > cutoff90.model_opt, "Cancer", "Healthy"),
+                                                            detected80 =
+                                                              ifelse(score.seq> cutoff80.model_opt, "Cancer", "Healthy"))
+
+pred.cov.final$id <- (features %>% select(id2) %>% distinct())$id2
+final <- inner_join(pred.cov.final, lucas.metadata, by =c("id"="id"))
+final$type <- NULL
+names(final)
+write_csv(final, "prediction_lucas_c3.csv")
+
+
+
+
+
+```
+
+

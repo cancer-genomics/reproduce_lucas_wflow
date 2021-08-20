@@ -1,0 +1,1659 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+
+
+
+<title>Prior predictive distributions of DELFI and LDCT in screening</title>
+
+<script src="site_libs/header-attrs-2.8/header-attrs.js"></script>
+<script src="site_libs/jquery-1.11.3/jquery.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="site_libs/bootstrap-3.3.5/css/cosmo.min.css" rel="stylesheet" />
+<script src="site_libs/bootstrap-3.3.5/js/bootstrap.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/html5shiv.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/respond.min.js"></script>
+<style>h1 {font-size: 34px;}
+       h1.title {font-size: 38px;}
+       h2 {font-size: 30px;}
+       h3 {font-size: 24px;}
+       h4 {font-size: 18px;}
+       h5 {font-size: 16px;}
+       h6 {font-size: 12px;}
+       code {color: inherit; background-color: rgba(0, 0, 0, 0.04);}
+       pre:not([class]) { background-color: white }</style>
+<script src="site_libs/jqueryui-1.11.4/jquery-ui.min.js"></script>
+<link href="site_libs/tocify-1.9.1/jquery.tocify.css" rel="stylesheet" />
+<script src="site_libs/tocify-1.9.1/jquery.tocify.js"></script>
+<script src="site_libs/navigation-1.1/tabsets.js"></script>
+<link href="site_libs/highlightjs-9.12.0/textmate.css" rel="stylesheet" />
+<script src="site_libs/highlightjs-9.12.0/highlight.js"></script>
+<script src="site_libs/kePrint-0.0.1/kePrint.js"></script>
+<link href="site_libs/lightable-0.0.1/lightable.css" rel="stylesheet" />
+<link href="site_libs/font-awesome-5.1.0/css/all.css" rel="stylesheet" />
+<link href="site_libs/font-awesome-5.1.0/css/v4-shims.css" rel="stylesheet" />
+
+<link rel="icon" href="https://github.com/workflowr/workflowr-assets/raw/master/img/reproducible.png">
+<!-- Add a small amount of space between sections. -->
+<style type="text/css">
+div.section {
+  padding-top: 12px;
+}
+</style>
+
+
+
+<style type="text/css">
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  span.underline{text-decoration: underline;}
+  div.column{display: inline-block; vertical-align: top; width: 50%;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  ul.task-list{list-style: none;}
+    </style>
+
+<style type="text/css">code{white-space: pre;}</style>
+<script type="text/javascript">
+if (window.hljs) {
+  hljs.configure({languages: []});
+  hljs.initHighlightingOnLoad();
+  if (document.readyState && document.readyState === "complete") {
+    window.setTimeout(function() { hljs.initHighlighting(); }, 0);
+  }
+}
+</script>
+
+
+
+
+
+
+
+
+<style type = "text/css">
+.main-container {
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+img {
+  max-width:100%;
+}
+.tabbed-pane {
+  padding-top: 12px;
+}
+.html-widget {
+  margin-bottom: 20px;
+}
+button.code-folding-btn:focus {
+  outline: none;
+}
+summary {
+  display: list-item;
+}
+pre code {
+  padding: 0;
+}
+</style>
+
+
+<style type="text/css">
+.dropdown-submenu {
+  position: relative;
+}
+.dropdown-submenu>.dropdown-menu {
+  top: 0;
+  left: 100%;
+  margin-top: -6px;
+  margin-left: -1px;
+  border-radius: 0 6px 6px 6px;
+}
+.dropdown-submenu:hover>.dropdown-menu {
+  display: block;
+}
+.dropdown-submenu>a:after {
+  display: block;
+  content: " ";
+  float: right;
+  width: 0;
+  height: 0;
+  border-color: transparent;
+  border-style: solid;
+  border-width: 5px 0 5px 5px;
+  border-left-color: #cccccc;
+  margin-top: 5px;
+  margin-right: -10px;
+}
+.dropdown-submenu:hover>a:after {
+  border-left-color: #adb5bd;
+}
+.dropdown-submenu.pull-left {
+  float: none;
+}
+.dropdown-submenu.pull-left>.dropdown-menu {
+  left: -100%;
+  margin-left: 10px;
+  border-radius: 6px 0 6px 6px;
+}
+</style>
+
+<script type="text/javascript">
+// manage active state of menu based on current page
+$(document).ready(function () {
+  // active menu anchor
+  href = window.location.pathname
+  href = href.substr(href.lastIndexOf('/') + 1)
+  if (href === "")
+    href = "index.html";
+  var menuAnchor = $('a[href="' + href + '"]');
+
+  // mark it active
+  menuAnchor.tab('show');
+
+  // if it's got a parent navbar menu mark it active as well
+  menuAnchor.closest('li.dropdown').addClass('active');
+
+  // Navbar adjustments
+  var navHeight = $(".navbar").first().height() + 15;
+  var style = document.createElement('style');
+  var pt = "padding-top: " + navHeight + "px; ";
+  var mt = "margin-top: -" + navHeight + "px; ";
+  var css = "";
+  // offset scroll position for anchor links (for fixed navbar)
+  for (var i = 1; i <= 6; i++) {
+    css += ".section h" + i + "{ " + pt + mt + "}\n";
+  }
+  style.innerHTML = "body {" + pt + "padding-bottom: 40px; }\n" + css;
+  document.head.appendChild(style);
+});
+</script>
+
+<!-- tabsets -->
+
+<style type="text/css">
+.tabset-dropdown > .nav-tabs {
+  display: inline-table;
+  max-height: 500px;
+  min-height: 44px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs > li.active:before {
+  content: "";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
+  content: "&#xe258;";
+  border: none;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs > li.active {
+  display: block;
+}
+
+.tabset-dropdown > .nav-tabs > li > a,
+.tabset-dropdown > .nav-tabs > li > a:focus,
+.tabset-dropdown > .nav-tabs > li > a:hover {
+  border: none;
+  display: inline-block;
+  border-radius: 4px;
+  background-color: transparent;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li {
+  display: block;
+  float: none;
+}
+
+.tabset-dropdown > .nav-tabs > li {
+  display: none;
+}
+</style>
+
+<!-- code folding -->
+
+
+
+<style type="text/css">
+
+#TOC {
+  margin: 25px 0px 20px 0px;
+}
+@media (max-width: 768px) {
+#TOC {
+  position: relative;
+  width: 100%;
+}
+}
+
+@media print {
+.toc-content {
+  /* see https://github.com/w3c/csswg-drafts/issues/4434 */
+  float: right;
+}
+}
+
+.toc-content {
+  padding-left: 30px;
+  padding-right: 40px;
+}
+
+div.main-container {
+  max-width: 1200px;
+}
+
+div.tocify {
+  width: 20%;
+  max-width: 260px;
+  max-height: 85%;
+}
+
+@media (min-width: 768px) and (max-width: 991px) {
+  div.tocify {
+    width: 25%;
+  }
+}
+
+@media (max-width: 767px) {
+  div.tocify {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+.tocify ul, .tocify li {
+  line-height: 20px;
+}
+
+.tocify-subheader .tocify-item {
+  font-size: 0.90em;
+}
+
+.tocify .list-group-item {
+  border-radius: 0px;
+}
+
+
+</style>
+
+
+
+</head>
+
+<body>
+
+
+<div class="container-fluid main-container">
+
+
+<!-- setup 3col/9col grid for toc_float and main content  -->
+<div class="row">
+<div class="col-xs-12 col-sm-4 col-md-3">
+<div id="TOC" class="tocify">
+</div>
+</div>
+
+<div class="toc-content col-xs-12 col-sm-8 col-md-9">
+
+
+
+
+<div class="navbar navbar-default  navbar-fixed-top" role="navigation">
+  <div class="container">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="index.html">reproduce_lucas_wflow</a>
+    </div>
+    <div id="navbar" class="navbar-collapse collapse">
+      <ul class="nav navbar-nav">
+        <li>
+  <a href="index.html">Home</a>
+</li>
+<li>
+  <a href="about.html">About</a>
+</li>
+<li>
+  <a href="license.html">License</a>
+</li>
+      </ul>
+      <ul class="nav navbar-nav navbar-right">
+        <li>
+  <a href="https://github.com/cancer-genomics/reproduce_lucas_wflow">
+    <span class="fas fa-github"></span>
+     
+    Source code
+  </a>
+</li>
+      </ul>
+    </div><!--/.nav-collapse -->
+  </div><!--/.container -->
+</div><!--/.navbar -->
+
+<div id="header">
+
+
+
+<h1 class="title toc-ignore">Prior predictive distributions of DELFI and LDCT in screening</h1>
+<h4 class="date">19 August, 2021</h4>
+
+</div>
+
+
+<p>
+<button type="button" class="btn btn-default btn-workflowr btn-workflowr-report" data-toggle="collapse" data-target="#workflowr-report">
+<span class="glyphicon glyphicon-list" aria-hidden="true"></span> workflowr <span class="glyphicon glyphicon-exclamation-sign text-danger" aria-hidden="true"></span>
+</button>
+</p>
+<div id="workflowr-report" class="collapse">
+<ul class="nav nav-tabs">
+<li class="active">
+<a data-toggle="tab" href="#summary">Summary</a>
+</li>
+<li>
+<a data-toggle="tab" href="#checks"> Checks <span class="glyphicon glyphicon-exclamation-sign text-danger" aria-hidden="true"></span> </a>
+</li>
+<li>
+<a data-toggle="tab" href="#versions">Past versions</a>
+</li>
+</ul>
+<div class="tab-content">
+<div id="summary" class="tab-pane fade in active">
+<p>
+<strong>Last updated:</strong> 2021-08-19
+</p>
+<p>
+<strong>Checks:</strong> <span class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span> 6 <span class="glyphicon glyphicon-exclamation-sign text-danger" aria-hidden="true"></span> 1
+</p>
+<p>
+<strong>Knit directory:</strong> <code>reproduce_lucas_wflow/</code> <span class="glyphicon glyphicon-question-sign" aria-hidden="true" title="This is the local directory in which the code in this file was executed."> </span>
+</p>
+<p>
+This reproducible <a href="http://rmarkdown.rstudio.com">R Markdown</a> analysis was created with <a
+  href="https://github.com/jdblischak/workflowr">workflowr</a> (version 1.6.2). The <em>Checks</em> tab describes the reproducibility checks that were applied when the results were created. The <em>Past versions</em> tab lists the development history.
+</p>
+<hr>
+</div>
+<div id="checks" class="tab-pane fade">
+<div id="workflowr-checks" class="panel-group">
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRMarkdownfilestronguncommittedchanges"> <span class="glyphicon glyphicon-exclamation-sign text-danger" aria-hidden="true"></span> <strong>R Markdown file:</strong> uncommitted changes </a>
+</p>
+</div>
+<div id="strongRMarkdownfilestronguncommittedchanges" class="panel-collapse collapse">
+<div class="panel-body">
+<p>The R Markdown is untracked by Git. To know which version of the R Markdown file created these results, you’ll want to first commit it to the Git repo. If you’re still working on the analysis, you can ignore this warning. When you’re finished, you can run <code>wflow_publish</code> to commit the R Markdown file and build the HTML.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongEnvironmentstrongempty"> <span class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span> <strong>Environment:</strong> empty </a>
+</p>
+</div>
+<div id="strongEnvironmentstrongempty" class="panel-collapse collapse">
+<div class="panel-body">
+<p>Great job! The global environment was empty. Objects defined in the global environment can affect the analysis in your R Markdown file in unknown ways. For reproduciblity it’s best to always run the code in an empty environment.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongSeedstrongcodesetseed20210819code"> <span class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span> <strong>Seed:</strong> <code>set.seed(20210819)</code> </a>
+</p>
+</div>
+<div id="strongSeedstrongcodesetseed20210819code" class="panel-collapse collapse">
+<div class="panel-body">
+<p>The command <code>set.seed(20210819)</code> was run prior to running the code in the R Markdown file. Setting a seed ensures that any results that rely on randomness, e.g. subsampling or permutations, are reproducible.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongSessioninformationstrongrecorded"> <span class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span> <strong>Session information:</strong> recorded </a>
+</p>
+</div>
+<div id="strongSessioninformationstrongrecorded" class="panel-collapse collapse">
+<div class="panel-body">
+<p>Great job! Recording the operating system, R version, and package versions is critical for reproducibility.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongCachestrongnone"> <span class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span> <strong>Cache:</strong> none </a>
+</p>
+</div>
+<div id="strongCachestrongnone" class="panel-collapse collapse">
+<div class="panel-body">
+<p>Nice! There were no cached chunks for this analysis, so you can be confident that you successfully produced the results during this run.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongFilepathsstrongrelative"> <span class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span> <strong>File paths:</strong> relative </a>
+</p>
+</div>
+<div id="strongFilepathsstrongrelative" class="panel-collapse collapse">
+<div class="panel-body">
+<p>Great job! Using relative paths to the files within your workflowr project makes it easier to run your code on other machines.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrong4f74274"> <span class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span> <strong>Repository version:</strong> 4f74274 </a>
+</p>
+</div>
+<div id="strongRepositoryversionstrong4f74274" class="panel-collapse collapse">
+<div class="panel-body">
+<p>
+Great! You are using Git for version control. Tracking code development and connecting the code version to the results is critical for reproducibility.
+</p>
+<p>
+The results in this page were generated with repository version 4f74274. See the <em>Past versions</em> tab to see a history of the changes made to the R Markdown and HTML files.
+</p>
+<p>
+Note that you need to be careful to ensure that all relevant files for the analysis have been committed to Git prior to generating the results (you can use <code>wflow_publish</code> or <code>wflow_git_commit</code>). workflowr only checks the R Markdown file, but you know if there are other scripts or data files that it depends on. Below is the status of the Git repository when the results were generated:
+</p>
+<pre><code>
+Ignored files:
+    Ignored:    analysis/.DS_Store
+    Ignored:    code/.DS_Store
+    Ignored:    data/.DS_Store
+
+Untracked files:
+    Untracked:  LICENSE
+    Untracked:  README.Rmd
+    Untracked:  analysis/SessionInfo.Rmd
+    Untracked:  analysis/extended_fig10a.Rmd
+    Untracked:  analysis/extended_fig10ab.Rmd
+    Untracked:  analysis/extended_fig10cd.Rmd
+    Untracked:  analysis/extended_fig11.Rmd
+    Untracked:  analysis/extended_fig12.Rmd
+    Untracked:  analysis/extended_fig2ab.Rmd
+    Untracked:  analysis/extended_fig2c.Rmd
+    Untracked:  analysis/extended_fig3.Rmd
+    Untracked:  analysis/extended_fig4.Rmd
+    Untracked:  analysis/extended_fig5.Rmd
+    Untracked:  analysis/extended_fig6a.Rmd
+    Untracked:  analysis/extended_fig6b.Rmd
+    Untracked:  analysis/extended_fig6c.Rmd
+    Untracked:  analysis/extended_fig7.Rmd
+    Untracked:  analysis/extended_fig8.Rmd
+    Untracked:  analysis/extended_fig9.Rmd
+    Untracked:  analysis/fig2a.Rmd
+    Untracked:  analysis/fig2b.Rmd
+    Untracked:  analysis/fig2c.Rmd
+    Untracked:  analysis/fig2c_pt2.Rmd
+    Untracked:  analysis/fig3.Rmd
+    Untracked:  analysis/fig4ab.Rmd
+    Untracked:  analysis/fig4c.Rmd
+    Untracked:  analysis/fig5a.Rmd
+    Untracked:  analysis/fig5b.Rmd
+    Untracked:  analysis/fig5cdef.Rmd
+    Untracked:  analysis/fig6b.Rmd
+    Untracked:  analysis/fig6cdefg.Rmd
+    Untracked:  code/PlasmaTools.lucas/
+    Untracked:  code/model_code/
+    Untracked:  code/models_c1/
+    Untracked:  code/models_c2/
+    Untracked:  code/models_c3/
+    Untracked:  code/plot-roc.r
+    Untracked:  code/plot-roc_with_e9.r
+    Untracked:  code/prepare_tcga_plot_data.r
+    Untracked:  code/preprocessing/
+    Untracked:  code/rlucas/
+    Untracked:  code/rpcr/
+    Untracked:  data/Extended Data Fig.12_recurrence_analysis copy.xlsx
+    Untracked:  data/Extended Data Fig.12_recurrence_analysis.xlsx
+    Untracked:  data/LUCAS_metadata.xlsx
+    Untracked:  data/LUCAS_pts_50_80_py20_excluding prior cancers.xlsx
+    Untracked:  data/TCGA_Lung/
+    Untracked:  data/TNM_stage_DELFI_4a.xlsx
+    Untracked:  data/TNM_stage_DELFI_4b.xlsx
+    Untracked:  data/all_sclc_vs_all_healthy_fragment_size.txt
+    Untracked:  data/all_sclc_vs_all_healthy_tfbs_coverage.txt
+    Untracked:  data/ascl1_rel_cov_10v10.txt
+    Untracked:  data/ascl1_tpm.txt
+    Untracked:  data/cristiano-GCLOESS-lucas-cov-z-mito-orig-delfi473.rds
+    Untracked:  data/cristiano-filtered-lucas2-cov-z-mito-gcloess-orig-delfi473.rds
+    Untracked:  data/cristiano2019_tableS7.csv
+    Untracked:  data/delfi_sensitivities.csv
+    Untracked:  data/fig5_data.xlsx
+    Untracked:  data/gc_correction.R/
+    Untracked:  data/ichor, fragm length DELFI.xlsx
+    Untracked:  data/id_subtype_key.txt
+    Untracked:  data/lucas-holdout-preds.csv
+    Untracked:  data/lucas_5mbs_delfi473.csv
+    Untracked:  data/median_lengths.R/
+    Untracked:  data/model_seq_glm.rds
+    Untracked:  data/pcr_experiment.rda
+    Untracked:  data/sclc_vs_other_fragment_size.txt
+    Untracked:  data/score.seq_fig3b_filtered.rds
+    Untracked:  data/sensitivity, specificity numbers in LUCAS_03_07_21.xlsx
+    Untracked:  data/stats.rds
+    Untracked:  data/ten_sample_rel_size.txt
+    Untracked:  data/testing-set.csv
+    Untracked:  data/tfbs_coverage.txt
+    Untracked:  data/tpm.txt
+    Untracked:  data/training-set.csv
+    Untracked:  data/validation_preds.csv
+
+Unstaged changes:
+    Modified:   analysis/_site.yml
+    Modified:   analysis/index.Rmd
+    Modified:   analysis/license.Rmd
+
+</code></pre>
+<p>
+Note that any generated files, e.g. HTML, png, CSS, etc., are not included in this status report because it is ok for generated content to have uncommitted changes.
+</p>
+</div>
+</div>
+</div>
+</div>
+<hr>
+</div>
+<div id="versions" class="tab-pane fade">
+<p>
+There are no past versions. Publish this analysis with <code>wflow_publish()</code> to start tracking its development.
+</p>
+<hr>
+</div>
+</div>
+</div>
+<div id="modeling-delfi-and-ldct-screening" class="section level1">
+<h1>Modeling DELFI and LDCT screening</h1>
+<div id="performance-of-ldct" class="section level2">
+<h2>Performance of LDCT</h2>
+<pre><code># A tibble: 12 x 4
+# Groups:   method, study, statistic [12]
+   method          study statistic   data            
+   &lt;chr&gt;           &lt;chr&gt; &lt;chr&gt;       &lt;list&gt;          
+ 1 LDCT            LUCAS sensitivity &lt;tibble [5 × 3]&gt;
+ 2 LDCT            NLST  sensitivity &lt;tibble [2 × 3]&gt;
+ 3 DELFI           LUCAS sensitivity &lt;tibble [2 × 3]&gt;
+ 4 DELFImulti      LUCAS sensitivity &lt;tibble [2 × 3]&gt;
+ 5 LDCT            LUCAS specificity &lt;tibble [2 × 3]&gt;
+ 6 LDCT            NLST  specificity &lt;tibble [2 × 3]&gt;
+ 7 DELFI           LUCAS specificity &lt;tibble [2 × 3]&gt;
+ 8 DELFImulti      LUCAS specificity &lt;tibble [2 × 3]&gt;
+ 9 DELFI,LDCT      LUCAS sensitivity &lt;tibble [2 × 3]&gt;
+10 DELFI,LDCT      LUCAS specificity &lt;tibble [2 × 3]&gt;
+11 DELFImulti,LDCT LUCAS sensitivity &lt;tibble [2 × 3]&gt;
+12 DELFImulti,LDCT LUCAS specificity &lt;tibble [2 × 3]&gt;</code></pre>
+<p>Weight sensitivity estimates by nlst</p>
+<pre><code>Warning: Missing column names filled in: &#39;X1&#39; [1]</code></pre>
+<pre><code>
+── Column specification ────────────────────────────────────────────────────────
+cols(
+  X1 = col_character(),
+  `DELFI, LDCT` = col_character(),
+  `DELFImulti, LDCT` = col_character(),
+  `Specificity cutoff` = col_character()
+)</code></pre>
+<table class="table" style="width: auto !important; margin-left: auto; margin-right: auto;">
+<thead>
+<tr>
+<th style="text-align:left;">
+Stage
+</th>
+<th style="text-align:right;">
+DELFI,LDCT
+</th>
+<th style="text-align:right;">
+DELFImulti,LDCT
+</th>
+<th style="text-align:left;">
+Stage
+</th>
+<th style="text-align:right;">
+NLST Frequency
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+Stage I (n=15)
+</td>
+<td style="text-align:right;">
+0.80
+</td>
+<td style="text-align:right;">
+0.87
+</td>
+<td style="text-align:left;">
+I
+</td>
+<td style="text-align:right;">
+159
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Stage II (n=7)
+</td>
+<td style="text-align:right;">
+0.86
+</td>
+<td style="text-align:right;">
+1.00
+</td>
+<td style="text-align:left;">
+II
+</td>
+<td style="text-align:right;">
+20
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Stage III (n=35)
+</td>
+<td style="text-align:right;">
+0.94
+</td>
+<td style="text-align:right;">
+0.97
+</td>
+<td style="text-align:left;">
+III
+</td>
+<td style="text-align:right;">
+60
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Stage IV (n=72)
+</td>
+<td style="text-align:right;">
+0.90
+</td>
+<td style="text-align:right;">
+0.96
+</td>
+<td style="text-align:left;">
+IV
+</td>
+<td style="text-align:right;">
+45
+</td>
+</tr>
+</tbody>
+</table>
+<p>The overall sensitivity for DELFI,LDCT and DELFImulti,LDCT is an average of the sensitivity (<span class="math inline">\(se\)</span>) estimates in LUCAS weighted by the stage distribution of lung cancers in NLST: <span class="math inline">\(\sum_i \frac{se_i n_i}{N}\)</span> where <span class="math inline">\(N=284\)</span> and the frequencies of stage I-IV lung cancers in NLST are 159, 20, 60, and 45, respectively. The weighted sensitivity for DELFI,LDCT is 85.0 and the weighted sensitivity for DELFImulti,LDCT is 91.5.</p>
+<pre><code># A tibble: 4 x 6
+# Groups:   method, study, statistic [2]
+  method          study statistic   parameter value distribution
+  &lt;chr&gt;           &lt;chr&gt; &lt;chr&gt;       &lt;chr&gt;     &lt;dbl&gt; &lt;chr&gt;       
+1 DELFI,LDCT      LUCAS sensitivity shape1    85.0  beta        
+2 DELFI,LDCT      LUCAS sensitivity shape2    15.0  beta        
+3 DELFImulti,LDCT LUCAS sensitivity shape1    91.5  beta        
+4 DELFImulti,LDCT LUCAS sensitivity shape2     8.55 beta        </code></pre>
+<pre><code>Scale for &#39;x&#39; is already present. Adding another scale for &#39;x&#39;, which will
+replace the existing scale.</code></pre>
+<pre><code>Scale for &#39;y&#39; is already present. Adding another scale for &#39;y&#39;, which will
+replace the existing scale.</code></pre>
+<p><img src="figure/fig6cdefg.Rmd/prior_performance-1.png" width="960" style="display: block; margin: auto;" /></p>
+</div>
+</div>
+<div id="predictive-distribution-for-future-study" class="section level1">
+<h1>Predictive distribution for future study</h1>
+<p>In a future study of 100,000 participants, what is our predictive distribution for - number individuals screened - lung cancer individuals screened - number of LDCT scans - false positives leading to unnecessary follow-up procedures - individuals with lung cancer not identified ( false negatives ) - sensitivity in overall population</p>
+<p>Imagine that the size of the screening study is determined by the number of samples collected in a finite period of time such that studies with lower compliance have fewer participants.</p>
+<div id="performance-of-ldct-alone-and-delfildct" class="section level2">
+<h2>Performance of LDCT alone and DELFI+LDCT</h2>
+<p>create copy for later comparison</p>
+</div>
+<div id="prior-predictive-distributions" class="section level2">
+<h2>Prior predictive distributions</h2>
+<p>All of the figures here are made from the object <code>predictive2</code>.</p>
+<pre><code>Warning: Removed 1 rows containing non-finite values (stat_boxplot).</code></pre>
+<pre><code>Warning: Removed 73 rows containing non-finite values (stat_boxplot).</code></pre>
+<p><img src="figure/fig6cdefg.Rmd/composite-1.png" width="1920" style="display: block; margin: auto;" /></p>
+<table class=" lightable-paper lightable-striped" style="font-family: &quot;Arial Narrow&quot;, arial, helvetica, sans-serif; width: auto !important; margin-left: auto; margin-right: auto;">
+<thead>
+<tr>
+<th style="text-align:left;">
+method_study
+</th>
+<th style="text-align:left;">
+statistic
+</th>
+<th style="text-align:right;">
+50%
+</th>
+<th style="text-align:right;">
+2.5%
+</th>
+<th style="text-align:right;">
+97.5%
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+LDCT,LUCAS
+</td>
+<td style="text-align:left;">
+acc
+</td>
+<td style="text-align:right;">
+0.58
+</td>
+<td style="text-align:right;">
+0.49
+</td>
+<td style="text-align:right;">
+0.68
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+LDCT,NLST
+</td>
+<td style="text-align:left;">
+acc
+</td>
+<td style="text-align:right;">
+0.73
+</td>
+<td style="text-align:right;">
+0.70
+</td>
+<td style="text-align:right;">
+0.76
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+DELFI,LDCT,LUCAS
+</td>
+<td style="text-align:left;">
+acc
+</td>
+<td style="text-align:right;">
+0.80
+</td>
+<td style="text-align:right;">
+0.72
+</td>
+<td style="text-align:right;">
+0.87
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+DELFImulti,LDCT,LUCAS
+</td>
+<td style="text-align:left;">
+acc
+</td>
+<td style="text-align:right;">
+0.80
+</td>
+<td style="text-align:right;">
+0.72
+</td>
+<td style="text-align:right;">
+0.87
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+DELFI,LUCAS
+</td>
+<td style="text-align:left;">
+acc
+</td>
+<td style="text-align:right;">
+0.70
+</td>
+<td style="text-align:right;">
+0.61
+</td>
+<td style="text-align:right;">
+0.79
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+DELFImulti,LUCAS
+</td>
+<td style="text-align:left;">
+acc
+</td>
+<td style="text-align:right;">
+0.70
+</td>
+<td style="text-align:right;">
+0.61
+</td>
+<td style="text-align:right;">
+0.78
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+LDCT,LUCAS
+</td>
+<td style="text-align:left;">
+fpr
+</td>
+<td style="text-align:right;">
+0.42
+</td>
+<td style="text-align:right;">
+0.32
+</td>
+<td style="text-align:right;">
+0.52
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+LDCT,NLST
+</td>
+<td style="text-align:left;">
+fpr
+</td>
+<td style="text-align:right;">
+0.27
+</td>
+<td style="text-align:right;">
+0.24
+</td>
+<td style="text-align:right;">
+0.30
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+DELFI,LDCT,LUCAS
+</td>
+<td style="text-align:left;">
+fpr
+</td>
+<td style="text-align:right;">
+0.20
+</td>
+<td style="text-align:right;">
+0.13
+</td>
+<td style="text-align:right;">
+0.28
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+DELFImulti,LDCT,LUCAS
+</td>
+<td style="text-align:left;">
+fpr
+</td>
+<td style="text-align:right;">
+0.20
+</td>
+<td style="text-align:right;">
+0.13
+</td>
+<td style="text-align:right;">
+0.28
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+DELFI,LUCAS
+</td>
+<td style="text-align:left;">
+fpr
+</td>
+<td style="text-align:right;">
+0.30
+</td>
+<td style="text-align:right;">
+0.21
+</td>
+<td style="text-align:right;">
+0.39
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+DELFImulti,LUCAS
+</td>
+<td style="text-align:left;">
+fpr
+</td>
+<td style="text-align:right;">
+0.30
+</td>
+<td style="text-align:right;">
+0.22
+</td>
+<td style="text-align:right;">
+0.39
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+LDCT,LUCAS
+</td>
+<td style="text-align:left;">
+number_screened
+</td>
+<td style="text-align:right;">
+5843.00
+</td>
+<td style="text-align:right;">
+3175.78
+</td>
+<td style="text-align:right;">
+9658.30
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+LDCT,NLST
+</td>
+<td style="text-align:left;">
+number_screened
+</td>
+<td style="text-align:right;">
+5843.00
+</td>
+<td style="text-align:right;">
+3148.00
+</td>
+<td style="text-align:right;">
+9680.25
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+DELFI,LDCT,LUCAS
+</td>
+<td style="text-align:left;">
+number_screened
+</td>
+<td style="text-align:right;">
+57908.50
+</td>
+<td style="text-align:right;">
+38964.60
+</td>
+<td style="text-align:right;">
+75397.00
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+DELFImulti,LDCT,LUCAS
+</td>
+<td style="text-align:left;">
+number_screened
+</td>
+<td style="text-align:right;">
+57813.00
+</td>
+<td style="text-align:right;">
+38473.55
+</td>
+<td style="text-align:right;">
+75515.30
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+DELFI,LUCAS
+</td>
+<td style="text-align:left;">
+number_screened
+</td>
+<td style="text-align:right;">
+57839.50
+</td>
+<td style="text-align:right;">
+38553.85
+</td>
+<td style="text-align:right;">
+75812.17
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+DELFImulti,LUCAS
+</td>
+<td style="text-align:left;">
+number_screened
+</td>
+<td style="text-align:right;">
+57776.50
+</td>
+<td style="text-align:right;">
+38700.95
+</td>
+<td style="text-align:right;">
+75548.15
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+LDCT,LUCAS
+</td>
+<td style="text-align:left;">
+TP
+</td>
+<td style="text-align:right;">
+47.00
+</td>
+<td style="text-align:right;">
+17.00
+</td>
+<td style="text-align:right;">
+108.00
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+LDCT,NLST
+</td>
+<td style="text-align:left;">
+TP
+</td>
+<td style="text-align:right;">
+47.00
+</td>
+<td style="text-align:right;">
+17.00
+</td>
+<td style="text-align:right;">
+106.00
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+DELFI,LDCT,LUCAS
+</td>
+<td style="text-align:left;">
+TP
+</td>
+<td style="text-align:right;">
+422.00
+</td>
+<td style="text-align:right;">
+185.00
+</td>
+<td style="text-align:right;">
+839.02
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+DELFImulti,LDCT,LUCAS
+</td>
+<td style="text-align:left;">
+TP
+</td>
+<td style="text-align:right;">
+450.00
+</td>
+<td style="text-align:right;">
+200.00
+</td>
+<td style="text-align:right;">
+887.00
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+DELFI,LUCAS
+</td>
+<td style="text-align:left;">
+TP
+</td>
+<td style="text-align:right;">
+426.00
+</td>
+<td style="text-align:right;">
+186.00
+</td>
+<td style="text-align:right;">
+846.00
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+DELFImulti,LUCAS
+</td>
+<td style="text-align:left;">
+TP
+</td>
+<td style="text-align:right;">
+439.00
+</td>
+<td style="text-align:right;">
+197.00
+</td>
+<td style="text-align:right;">
+870.02
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+LDCT,LUCAS
+</td>
+<td style="text-align:left;">
+tpr
+</td>
+<td style="text-align:right;">
+0.95
+</td>
+<td style="text-align:right;">
+0.86
+</td>
+<td style="text-align:right;">
+1.00
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+LDCT,NLST
+</td>
+<td style="text-align:left;">
+tpr
+</td>
+<td style="text-align:right;">
+0.94
+</td>
+<td style="text-align:right;">
+0.84
+</td>
+<td style="text-align:right;">
+1.00
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+DELFI,LDCT,LUCAS
+</td>
+<td style="text-align:left;">
+tpr
+</td>
+<td style="text-align:right;">
+0.85
+</td>
+<td style="text-align:right;">
+0.77
+</td>
+<td style="text-align:right;">
+0.92
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+DELFImulti,LDCT,LUCAS
+</td>
+<td style="text-align:left;">
+tpr
+</td>
+<td style="text-align:right;">
+0.92
+</td>
+<td style="text-align:right;">
+0.85
+</td>
+<td style="text-align:right;">
+0.97
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+DELFI,LUCAS
+</td>
+<td style="text-align:left;">
+tpr
+</td>
+<td style="text-align:right;">
+0.86
+</td>
+<td style="text-align:right;">
+0.78
+</td>
+<td style="text-align:right;">
+0.93
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+DELFImulti,LUCAS
+</td>
+<td style="text-align:left;">
+tpr
+</td>
+<td style="text-align:right;">
+0.89
+</td>
+<td style="text-align:right;">
+0.81
+</td>
+<td style="text-align:right;">
+0.95
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="positive-predictive-value" class="section level2">
+<h2>Positive predictive value</h2>
+<table class=" lightable-paper lightable-striped" style="font-family: &quot;Arial Narrow&quot;, arial, helvetica, sans-serif; width: auto !important; margin-left: auto; margin-right: auto;">
+<thead>
+<tr>
+<th style="text-align:left;">
+method_study
+</th>
+<th style="text-align:right;">
+50%
+</th>
+<th style="text-align:right;">
+2.5%
+</th>
+<th style="text-align:right;">
+97.5%
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+LDCT,LUCAS
+</td>
+<td style="text-align:right;">
+1.94
+</td>
+<td style="text-align:right;">
+0.83
+</td>
+<td style="text-align:right;">
+3.82
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+LDCT,NLST
+</td>
+<td style="text-align:right;">
+2.97
+</td>
+<td style="text-align:right;">
+1.31
+</td>
+<td style="text-align:right;">
+5.50
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+DELFI,LDCT,LUCAS
+</td>
+<td style="text-align:right;">
+3.65
+</td>
+<td style="text-align:right;">
+1.63
+</td>
+<td style="text-align:right;">
+7.47
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+DELFImulti,LDCT,LUCAS
+</td>
+<td style="text-align:right;">
+3.92
+</td>
+<td style="text-align:right;">
+1.75
+</td>
+<td style="text-align:right;">
+7.93
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+DELFI,LUCAS
+</td>
+<td style="text-align:right;">
+2.49
+</td>
+<td style="text-align:right;">
+1.13
+</td>
+<td style="text-align:right;">
+4.90
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+DELFImulti,LUCAS
+</td>
+<td style="text-align:right;">
+2.56
+</td>
+<td style="text-align:right;">
+1.19
+</td>
+<td style="text-align:right;">
+4.95
+</td>
+</tr>
+</tbody>
+</table>
+<p>Percent improvement of PPV from LDCT,LUCAS</p>
+<table class=" lightable-paper lightable-striped" style="font-family: &quot;Arial Narrow&quot;, arial, helvetica, sans-serif; width: auto !important; margin-left: auto; margin-right: auto;">
+<thead>
+<tr>
+<th style="text-align:left;">
+method_study
+</th>
+<th style="text-align:right;">
+50%
+</th>
+<th style="text-align:right;">
+2.5%
+</th>
+<th style="text-align:right;">
+97.5%
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+LDCT,NLST
+</td>
+<td style="text-align:right;">
+53.09
+</td>
+<td style="text-align:right;">
+57.83
+</td>
+<td style="text-align:right;">
+43.98
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+DELFI,LDCT,LUCAS
+</td>
+<td style="text-align:right;">
+88.14
+</td>
+<td style="text-align:right;">
+96.39
+</td>
+<td style="text-align:right;">
+95.55
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+DELFImulti,LDCT,LUCAS
+</td>
+<td style="text-align:right;">
+102.06
+</td>
+<td style="text-align:right;">
+110.84
+</td>
+<td style="text-align:right;">
+107.59
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+DELFI,LUCAS
+</td>
+<td style="text-align:right;">
+28.35
+</td>
+<td style="text-align:right;">
+36.14
+</td>
+<td style="text-align:right;">
+28.27
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+DELFImulti,LUCAS
+</td>
+<td style="text-align:right;">
+31.96
+</td>
+<td style="text-align:right;">
+43.37
+</td>
+<td style="text-align:right;">
+29.58
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div id="text-from-manuscript" class="section level1">
+<h1>Text from manuscript</h1>
+<p>To examine how our approach would perform for the overall detection of individuals with lung cancer at a population scale, we evaluated the DELFI model in a theoretical population of 100,000 high‐risk individuals using Monte Carlo simulations. Using the estimated sensitivities and specificities of LDCT alone or with DELFI as a prescreen in this hypothetical population, we modeled the uncertainty of these parameters using probability distributions centered at empirical estimates obtained from the NLST and/or LUCAS cohorts (Fig. 5b, Supplementary Table 8). The likely prevalence of lung cancer in this population using the NLST study estimate of 0.91% would be in 910 individuals (95% CI, 428-1584). Despite the recommendations for LDCT screening, adherence in the US is only 5.9%, resulting in an average of 5,979 tested individuals (95% CI, 3,176-9,658). As blood tests offer high accessibility and compliance, with adherence rates of 80‐90% reported for blood‐based biomarkers, we assumed that 80% (95 CI, 39-76%) of the lung cancer screening population would be tested using the combined approach. Monte Carlo simulations from these probability distributions revealed that LDCT alone detected an average of 51 individuals (95% CI, 17-108) with lung cancer (Fig. 5c). Using DELFI as a prescreen for LDCT, on average we would detect 394 additional lung cancer cases, or a 9‐fold increase (95% CI, 4.4-19.6-fold increase) compared to LDCT alone (Fig. 5c). The combined approach would not only substantially improve detection of lung cancer, but would be expected to increase the accuracy of the test, reduce the number of unnecessary procedures, and increase positive predictive value (PPV) from 1.9% (95% CI, 0.8-3.8%) for LDCT alone to 3.9% for DELFI and LDCT (95% CI, 1.8-7.9%, Fig. 5 d‐f). These analyses suggest a significant population‐wide benefit for combining a high‐sensitivity blood‐based early detection test with a subsequent diagnostic LDCT for detection of lung cancer.</p>
+</div>
+<div id="methods" class="section level1">
+<h1>Methods</h1>
+<div id="modelling-of-delfi-performance-in-a-screening-population" class="section level2">
+<h2>Modelling of DELFI performance in a screening population</h2>
+<p>To assess performance of LDCT alone and DELFI followed by LDCT in a hypothetical screening population of 100,000 individuals, we used Monte Carlo simulations to capture uncertainty of unknown parameters sensitivity, specificity, adherence, and lung cancer prevalence. Prior models of sensitivity for LUCAS alone were centered loosely on empirical estimates from the LUCAS and NLST cohorts: <span class="math display">\[\begin{align*}
+\theta_{1,M} &amp;\sim \left\{
+\begin{array}{ll}
+\pi \times \text{N}(0.96, 0.005) + (1-\pi) \times \text{N}(0.94, 0.02)
+&amp; M=\text{LDCT}_{\text{LUCAS}}\\
+\text{Beta}(93.8, 6.2) &amp; M = \text{LDCT}_{\text{NLST}}\\
+\text{Beta}(85, 15) &amp; M = \text{DELFI,LDCT}\\
+\text{Beta}(91, 9) &amp; M=\text{DELFI}_{\text{multi}}\text{,LDCT}.
+\end{array}
+\right.
+\end{align*}\]</span> We sampled <span class="math inline">\(\pi \sim \text{Bernoulli}(0.5)\)</span>.</p>
+<p>For specificity, prior models were <span class="math display">\[\begin{align*}
+\theta_{2,M} &amp;\sim \left\{
+\begin{array}{ll}
+\text{Beta}(58, 42)&amp; M = \text{LDCT}_{\text{LUCAS}} \\
+\text{Beta}(730, 270) &amp; M = \text{LDCT}_{\text{NLST}} \\
+\text{Beta}(80, 20) &amp; M = \text{DELFI,LDCT} \\
+\text{Beta}(80, 20) &amp; M=\text{DELFI}_{\text{multi}}\text{,LDCT}.
+\end{array}
+\right.
+\end{align*}\]</span></p>
+<p>The number of individuals screened in our simulated screening study depends on adherence to screening guidelines. Letting <span class="math inline">\(n\)</span> denote the size of our screening study, our sampling model for <span class="math inline">\(n\)</span> is given by <span class="math display">\[\begin{align*}
+n &amp;\sim \text{Binomial}(10^5, \eta) \\
+\eta &amp;\sim \text{beta}(\alpha_n, \beta_n).\\
+\end{align*}\]</span> For LDCT alone, shape parameters <span class="math inline">\(\alpha_n\)</span> and <span class="math inline">\(\beta_n\)</span> were 12 and 188 (<span class="citation">@ref</span>), while for DELFI <span class="math inline">\(\pm\)</span> CEA followed by LDCT shape parameters were 15 and 11 (<span class="citation">@ref</span> PSA compliance paper). Conditional on the size of our screening study and draws of <span class="math inline">\(\theta_{1,M}\)</span> and <span class="math inline">\(\theta_{2,M}\)</span> from their respective prior distributions, we sampled the disease status, <span class="math inline">\(y\)</span>, and screening results, <span class="math inline">\(x\)</span>, conditional on <span class="math inline">\(y\)</span>: <span class="math display">\[\begin{align*}
+y_i &amp;\sim \text{Bernoulli}(\psi)~\text{for } i = 1, ..., n \\
+\psi &amp;\sim \text{Beta}(9.1, 990.9) \\
+x_i | \{y_i = 1, M\} &amp;\sim \text{Bernoulli}(\theta_{1,M}) \\
+x_i | \{y_i = 0, M\} &amp;\sim \text{Bernoulli}(1-\theta_{2,M}).
+\end{align*}\]</span> The informative prior for prevalence, <span class="math inline">\(\psi\)</span>, in our hypothetical population ensures that our screening study will be comprised predominantly of individuals without cancer, but allows the true prevalence to be smaller or larger than the estimate of 0.91% from <span class="citation">@study/population</span> (<span class="citation">@ref</span>). The number of lung cancers detected, accuracy, false positive rate, and positive predictive value were calculated from the joint distribution of <span class="math inline">\(\pmb{x}\)</span> and <span class="math inline">\(\pmb{y}\)</span>. We repeated the above sampling procedure 10,000 times, thereby obtaining predictive distributions for these statistics that reflect uncertainty of sensitivity, specificity, adherence, and prevalence.</p>
+<br>
+<p>
+<button type="button" class="btn btn-default btn-workflowr btn-workflowr-sessioninfo" data-toggle="collapse" data-target="#workflowr-sessioninfo" style="display: block;">
+<span class="glyphicon glyphicon-wrench" aria-hidden="true"></span> Session information
+</button>
+</p>
+<div id="workflowr-sessioninfo" class="collapse">
+<pre><code>R version 4.0.5 (2021-03-31)
+Platform: x86_64-apple-darwin17.0 (64-bit)
+Running under: macOS Catalina 10.15.7
+
+Matrix products: default
+BLAS:   /Library/Frameworks/R.framework/Versions/4.0/Resources/lib/libRblas.dylib
+LAPACK: /Library/Frameworks/R.framework/Versions/4.0/Resources/lib/libRlapack.dylib
+
+locale:
+[1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
+
+attached base packages:
+[1] grid      stats     graphics  grDevices utils     datasets  methods  
+[8] base     
+
+other attached packages:
+ [1] here_1.0.1       kableExtra_1.3.4 readxl_1.3.1     mvtnorm_1.1-1   
+ [5] fs_1.5.0         forcats_0.5.1    stringr_1.4.0    dplyr_1.0.6     
+ [9] purrr_0.3.4      readr_1.4.0      tidyr_1.1.3      tibble_3.1.2    
+[13] tidyverse_1.3.1  magrittr_2.0.1   ggplot2_3.3.3    jcolors_0.0.4   
+[17] workflowr_1.6.2 
+
+loaded via a namespace (and not attached):
+ [1] Rcpp_1.0.6        svglite_2.0.0     lubridate_1.7.10  ps_1.6.0         
+ [5] assertthat_0.2.1  rprojroot_2.0.2   digest_0.6.27     utf8_1.2.1       
+ [9] R6_2.5.0          cellranger_1.1.0  backports_1.2.1   reprex_2.0.0     
+[13] evaluate_0.14     highr_0.9         httr_1.4.2        pillar_1.6.1     
+[17] rlang_0.4.11      rstudioapi_0.13   jquerylib_0.1.4   rmarkdown_2.8    
+[21] labeling_0.4.2    webshot_0.5.2     munsell_0.5.0     broom_0.7.6      
+[25] compiler_4.0.5    httpuv_1.6.1      modelr_0.1.8      xfun_0.23        
+[29] systemfonts_1.0.2 pkgconfig_2.0.3   htmltools_0.5.1.1 tidyselect_1.1.1 
+[33] viridisLite_0.4.0 fansi_0.5.0       crayon_1.4.1      dbplyr_2.1.1     
+[37] withr_2.4.2       later_1.2.0       MASS_7.3-54       jsonlite_1.7.2   
+[41] gtable_0.3.0      lifecycle_1.0.0   DBI_1.1.1         git2r_0.28.0     
+[45] scales_1.1.1      cli_2.5.0         stringi_1.6.2     farver_2.1.0     
+[49] promises_1.2.0.1  xml2_1.3.2        bslib_0.2.5.1     ellipsis_0.3.2   
+[53] generics_0.1.0    vctrs_0.3.8       tools_4.0.5       glue_1.4.2       
+[57] hms_1.1.0         yaml_2.2.1        colorspace_2.0-1  isoband_0.2.4    
+[61] rvest_1.0.0       knitr_1.33        haven_2.4.1       sass_0.4.0       </code></pre>
+</div>
+</div>
+</div>
+
+
+<!-- Adjust MathJax settings so that all math formulae are shown using
+TeX fonts only; see
+http://docs.mathjax.org/en/latest/configuration.html.  This will make
+the presentation more consistent at the cost of the webpage sometimes
+taking slightly longer to load. Note that this only works because the
+footer is added to webpages before the MathJax javascript. -->
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    "HTML-CSS": { availableFonts: ["TeX"] }
+  });
+</script>
+
+
+
+
+</div>
+</div>
+
+</div>
+
+<script>
+
+// add bootstrap table styles to pandoc tables
+function bootstrapStylePandocTables() {
+  $('tr.odd').parent('tbody').parent('table').addClass('table table-condensed');
+}
+$(document).ready(function () {
+  bootstrapStylePandocTables();
+});
+
+
+</script>
+
+<!-- tabsets -->
+
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+
+$(document).ready(function () {
+  $('.tabset-dropdown > .nav-tabs > li').click(function () {
+    $(this).parent().toggleClass('nav-tabs-open');
+  });
+});
+</script>
+
+<!-- code folding -->
+
+<script>
+$(document).ready(function ()  {
+
+    // move toc-ignore selectors from section div to header
+    $('div.section.toc-ignore')
+        .removeClass('toc-ignore')
+        .children('h1,h2,h3,h4,h5').addClass('toc-ignore');
+
+    // establish options
+    var options = {
+      selectors: "h1,h2,h3",
+      theme: "bootstrap3",
+      context: '.toc-content',
+      hashGenerator: function (text) {
+        return text.replace(/[.\\/?&!#<>]/g, '').replace(/\s/g, '_');
+      },
+      ignoreSelector: ".toc-ignore",
+      scrollTo: 0
+    };
+    options.showAndHide = true;
+    options.smoothScroll = true;
+
+    // tocify
+    var toc = $("#TOC").tocify(options).data("toc-tocify");
+});
+</script>
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

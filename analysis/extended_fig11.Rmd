@@ -1,0 +1,198 @@
+---
+title: "Kaplan-Meier curves by dichotomized DELFI score"
+site: workflowr::wflow_site
+output:
+  workflowr::wflow_html:
+    toc: true
+    code_folding: hide
+editor_options:
+  chunk_output_type: console
+---
+
+
+
+Patients with stage IV adenocarcinoma of the lung. 
+
+```{r packages, message=FALSE}
+library(SummarizedExperiment)
+library(tidyverse)
+library(magrittr)
+library(stringr)
+library(survival)
+library(survminer)
+library(ggplot2)
+library(readxl)
+library(tidyr)
+library(broom)
+library(gridExtra)
+library(kableExtra)
+library(tidyr)
+library(devtools)
+library(here)
+load_all(here("code", "rlucas"))
+data(se, package="rlucas")
+```
+
+```{r datawrangling}
+coldat <- colData(se) %>%
+    as_tibble() %>%
+    mutate(lab_id = colnames(se)) %>%
+    filter(!is.na(delfi_group)) %>%
+    filter(histology=="Adenocarcinoma" &  stage=="IV") %>%
+    mutate(is_deceased=ifelse(survival=="Deceased", 1, 0)) 
+se.km <- se[, coldat$lab_id]
+stopifnot(all(se.km$assigned_group==3))
+```
+
+# Kaplan-Meier curves
+
+```{r survcurve_seq, fig.width=10, fig.height=6,dev=c("png", "pdf")}
+Ns <- coldat %>%
+    group_by(delfi_group) %>%
+    summarize(n=n(), .groups="drop") %>%
+    mutate(delfi_group=as.character(delfi_group))
+labs <- as.expression(paste0(Ns$delfi_group, " (n=", Ns$n, ")"))
+surv <- with(coldat, Surv(days_alive, is_deceased))
+fit <- survfit(surv ~ delfi_group, data = coldat)
+fig <- ggsurvplot(fit, data = coldat,
+           surv.median.line = "hv", ## Add medians survival
+           ## Add p-value and tervals
+           pval = FALSE,
+           conf.int = FALSE,
+           ## Add risk table
+           risk.table = FALSE,
+           tables.height = 0.2,
+           tables.theme = theme_cleantable(),
+           axes.offset=FALSE,
+           ## Color palettes. Use custom color: c("#E7B800", "#2E9FDF"),
+           ## or brewer color (e.g.: "Dark2"), or ggsci color (e.g.: "jco")
+           ##palette = c("#E7B800", "#2E9FDF"),
+           legend=c(0.75, 0.8),
+           legend.title="", 
+           palette=c("blue", "red"),
+           legend.labs=labs,
+           ggtheme = theme_classic(base_size=20) # Change ggplot2 theme
+           ) +
+    ylab("Cancer-specific survival\n") +
+    xlab("Days")
+medians <- surv_median(fit)$median
+breaks <- sort(c(seq(0, 3000, by=1000), medians))
+fig$plot <- fig$plot  +
+    scale_x_continuous(breaks=breaks,
+                       expand=expansion(mult=c(0, 0.01)))
+X2 <- survdiff(Surv(days_alive, is_deceased) ~ delfi_group, data=coldat)$chisq
+p <- round(1-pchisq(X2, df=1), 4)
+if(p < 0.001){
+    plabel <- "P < 0.001"
+} else plabel <- paste0("P = ", round(p, 3))
+fig$plot <- fig$plot + annotate("text", x=2000, y=0.3, label=plabel,
+                                size=5)
+print(fig$plot)
+```
+
+
+# Cox proportional hazards model
+
+## Adjusted for histology, age, and tumor stage
+
+```{r select_samples}
+path <- system.file("extdata", package="rlucas")
+fname <- file.path(path, "survival_analysis_samples.xlsx")
+ids <- read_excel(fname, sheet=1,
+                           skip=1) %>%
+    select(pgdx_id, cd_id)
+se2 <- se[, ids$cd_id]
+coldat <- colData(se2) %>%
+    as_tibble() %>%
+    mutate(is_deceased=ifelse(survival=="Deceased", 1, 0))
+```
+
+
+```{r coxph_models}
+myanova <- function(nested, full){
+    p <- tidy(anova(nested, full))$p.value[2] %>%
+                                 round(3) %>%
+                                 formatC(digits=3)
+    p2 <- ifelse(p=="   0", "p < 0.001", paste0("p = ", p))
+    p2
+}
+coldat$survival <- with(coldat, Surv(days_alive, is_deceased))
+models <- list(full=formula(survival ~ delfi_group + histology + age_group + stage),
+               histology=formula(survival ~ delfi_group + stage + age_group),
+               stage=formula(survival ~ delfi_group + histology + age_group),
+               age_group=formula(survival ~ delfi_group + histology + stage),
+               delfi_group=formula(survival ~ histology + stage + age_group))
+fit <- models %>%
+    map(coxph, data=coldat)
+pvals <- fit[2:5] %>%
+    map_chr(myanova, full=fit[[1]]) %>%
+    as_tibble() %>%
+    set_colnames("p") %>%
+    mutate(term2=names(fit[2:5]))
+```
+
+Data wrangling
+
+```{r format_models}
+coefs <- fit[["full"]] %>%
+    tidy()
+clevels <- c(levels(coldat$delfi_group),
+             levels(coldat$age_group),
+             levels(coldat$histology),
+             levels(coldat$stage))
+coldat2 <- select(coldat, delfi_group,
+                  histology,
+                  age_group,
+                  stage) %>%
+    pivot_longer(everything(), names_to="term2", values_to="coefname") %>%
+    filter(!duplicated(coefname)) %>%
+    arrange(term2) %>%
+    unite("term", c(term2, coefname), sep="", remove=FALSE) %>%
+    left_join(coefs, by="term") %>%
+    mutate(estimate=ifelse(is.na(estimate), 0, estimate),
+           std.error=ifelse(is.na(std.error), 0, std.error),
+           hr=exp(estimate),
+           upper=exp(estimate + 1.96*std.error),
+           lower=exp(estimate - 1.96*std.error),
+           coefname=factor(as.character(coefname),
+                           levels=clevels))
+categories <- coldat2 %>%
+    group_by(term2) %>%
+    summarize(n=n(), .groups="drop") %>%
+    mutate(category=c("Age",
+                   "Genome-wide\nfragmentation\nfeatures",
+                   "Histological\ngroup",
+                   "Stage")) %>%
+    left_join(pvals, by="term2") %>%
+    unite("category_label", c(category, p), sep="\n\n") %>%
+    mutate(category_label=factor(category_label,
+                                 levels=category_label[c(2, 1, 3, 4)]))
+coldat3 <- left_join(coldat2, categories, by="term2") %>%
+    mutate(coefname=fct_rev(coefname))
+p <- coldat3 %>%
+    ggplot(aes(hr, coefname)) +
+    geom_vline(xintercept=1, linetype="dashed") +
+    geom_errorbarh(height=0.2, aes(xmin=lower, xmax=upper)) +
+    geom_point(shape=21, size=3, fill="white") +
+    facet_wrap(~category_label, ncol=1,
+               scales="free_y", strip.position="right") +
+    theme_bw(base_size=20) +
+    theme(strip.background=element_blank(),
+          strip.text.y=element_text(angle=0),
+          panel.background=element_rect(fill="white",
+                                        color="white"),
+          panel.grid=element_blank(),
+          rect=element_blank(),
+          axis.line.y.left=element_line(color="black"),
+          axis.line.x.bottom=element_line(color="black"),
+          axis.text.x=element_text(size=15)) +
+    xlab("Hazards ratio") +
+    ylab("") +
+    scale_x_log10(n.breaks=8)
+```
+
+
+```{r composite, fig.width=18, fig.height=8,dev=c("png", "pdf")}
+grid.arrange(fig$plot, p, ncol=2, widths=unit(c(0.45, 0.55), "npc"))
+```
+

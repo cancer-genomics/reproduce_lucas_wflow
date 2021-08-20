@@ -1,0 +1,165 @@
+---
+title: "Visualizing Feature Distributions in a Heatmap"
+site: workflowr::wflow_site
+output: html_document
+chunk_output_type: console
+  ---
+  
+
+```{r packages, echo=FALSE, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(openxlsx)
+library(devtools)
+library(ComplexHeatmap)
+library(circlize)
+library(data.table)
+library(here)
+load_all(here("code", "rlucas"))
+data(prediction_lucas, package="rlucas")
+data(metadata, package="rlucas")
+
+# library(caret)
+# library(recipes)
+# library(pROC)
+
+
+#---------------------------choice of parameters----------------------------#
+# which model results to use for annotation
+# selected_model = 'full_lasso_2'
+selected_model = 'seq'
+
+# read in data from the first submission training set
+data_iteration = 1
+
+# whether or not include coverage features
+include_cov = FALSE
+```
+
+```{r sample.set.annotation, echo=FALSE}
+library(readxl)
+dm.meta <- read_excel(here("data", "LUCAS_metadata.xlsx"), sheet = data_iteration)
+```
+
+```{r heatmap.body, echo=FALSE,dev=c("png", "pdf")}
+
+#--------------------------------construct the feature table-------------------------------#
+#--------------------------------------- Heatmap Body  ------------------------------------#
+features <- read_csv(here("data","training-set.csv"))
+multinucs <- bins5mb %>% group_by(id) %>% summarize(multinucratio = sum(multinucs)/(sum(short+long)))
+features <- inner_join(multinucs, features, by="id")
+
+labels <- dm.meta %>% 
+          filter(Training == 'YES') %>% 
+          select(id, type)
+
+features <- inner_join(labels, features, by=c("id"="id"))
+
+features <- features %>% mutate(clinical_smokingstatus=factor(clinical_smokingstatus,
+                                                              c("never", "former", "current")),
+                                clinical_COPD=as.integer(clinical_COPD))
+
+if (include_cov == TRUE){
+  dna_features <- features %>% select(starts_with('zscore_') | starts_with('ratio_') | starts_with('cov_'))
+}else{
+  dna_features <- features %>% select(starts_with('zscore_') | starts_with('ratio_'))
+}
+
+dna_features <- as.matrix(dna_features)
+dna_features <- apply(dna_features, 2, scale)
+rownames(dna_features) <- features$id
+```
+
+```{r sample.annotation, echo=FALSE}
+#--------------------------------construct annotation object -------------------------------#
+
+# load in the stored model prediction values
+if (data_iteration == 1){
+  training_score_path <- here("code","rlucas","data", "prediction_lucas.rda")
+  heldout_score_path <- here("data", "lucas-holdout-preds.csv")
+}
+
+model_cols <- list('full_lasso_2' = 'score.full2',
+                         'seq' = 'score.seq')
+load(training_score_path)
+training_scores <- preds %>% select(id, type, eval(model_cols[[selected_model]]))
+heldout_scores <- tibble(fread(heldout_score_path)) %>% select(id, type, eval(model_cols[[selected_model]]))
+delfi_scores <- rbind(training_scores, heldout_scores)
+setnames(delfi_scores, model_cols[[selected_model]], 'Delfi Score')
+delfi_scores <- delfi_scores %>% select(-type)
+
+# separate out data in the body of the heatmap from the annotations
+sample_annot <- features %>% select(id, type, clinical_packyears, clinical_smokingstatus)
+meta_annot <- meta %>% select(id, Stage, Sex, age)
+sample_annot <- inner_join(sample_annot, meta_annot, by = c("id" = "id"))
+sample_annot <- inner_join(sample_annot, delfi_scores, by = c("id" = "id"))
+
+sample_annot <- data.frame(sample_annot)
+rownames(sample_annot) <- sample_annot$id
+sample_annot$id <- NULL
+
+sample_annot$Type <- factor(sample_annot$type, levels = c('healthy', 'cancer'))
+sample_annot$`Pack Years` <- as.numeric(sample_annot$clinical_packyears)
+sample_annot$`Smoking Status` <- factor(sample_annot$clinical_smokingstatus, levels = c('never', 'former', 'current'))
+sample_annot$Sex <- factor(sample_annot$Sex, levels = c('Male', 'Female'))
+sample_annot$Age <- as.numeric(sample_annot$age)
+sample_annot$Stage <- factor(sample_annot$Stage, levels = c('I', 'II', 'III', 'IV'))
+sample_annot$`Delfi Score` = sample_annot$Delfi.Score
+
+sample_annot[,c('type', 'clinical_packyears', 'clinical_smokingstatus', 'age', 'class')] <- NULL
+sample_annot  = sample_annot[,c('Type', 'Stage', 'Age', 'Sex', 'Smoking Status', 'Pack Years', 'Delfi Score')]
+
+```
+
+```{r feature.annotation, echo=FALSE}
+#--------------------------------construct feature annotation object ----------------------------#
+features_annot <- data.frame(Family = sapply(colnames(dna_features), function(x) str_split(x, '_')[[1]][1]))
+rownames(features_annot) <- colnames(dna_features)
+
+```
+
+
+```{r data.setup, echo=FALSE}
+# manually re-order the data matrix rows, and the row annotations
+# such that the samples are grouped by type (healthy vs cancer), 
+# and sorted in decreasing order of delfi scores
+sample_annot <- sample_annot[with(sample_annot, order(Type, - `Delfi Score`)),]
+dna_features <- dna_features[rownames(sample_annot),]
+split <- sample_annot$Type
+```
+
+```{r heatmap, echo=FALSE, fig.width = 12, fig.height = 20, message=FALSE, warning=FALSE,dev=c("png", "pdf")}
+col_fun_body = colorRamp2(c(-2, -1, 0, 1, 2), rev(c('#d7191c', '#fdae61', '#ffffbf', '#abd9e9', '#2c7bb6')))
+
+col_fun_row = list(Age = colorRamp2(c(23, 94), c('#f7fcf0', '#4eb3d3')) ,
+                   Sex = structure(c('#807dba', '#dadaeb'), names = c('Male', 'Female')),
+                   `Smoking Status` = structure(c('#ffffff', '#d9d9d9', '#737373'), names = c('never', 'former', 'current')),
+                   `Pack Years` = colorRamp2(c(0, 150), c('#f6eff7', '#3690c0')),
+                   Type = structure(c('#f7f7f7', '#c7e9c0', '#238b45'), names = c('healthy', 'benign', 'cancer')),
+                   Stage = structure(c('#eeeeee', '#fee5d9', '#fcae91', '#fb6a4a', '#cb181d'), names = c('NA', 'I', 'II','III','IV')),
+                   `Delfi Score` = colorRamp2(c(0, 1), c('#ffffff', '#111111')))
+
+
+col_fun_column = list(Family = structure(c('#66c2a5', '#8da0cb', '#e78ac3'), names = c('zscore', 'ratio', 'cov')))
+
+
+
+ht <- Heatmap(dna_features, name = "Values", col = col_fun_body, show_row_dend =  FALSE, show_column_dend = FALSE, show_row_names = FALSE, show_column_names = FALSE, row_title = 'Samples', column_title = 'Features', left_annotation = rowAnnotation(df = sample_annot, col = col_fun_row, annotation_name_side= 'top'), top_annotation = columnAnnotation(df = features_annot, col = col_fun_column), row_split = split, cluster_row_slices = FALSE, cluster_rows = FALSE)
+
+ #out.file <- paste0('../docs/figure/feature_heatmap_training_', selected_model , '.pdf')
+
+#out.file <- paste0('../docs/figure/feature_heatmap.Rmd/feature_heatmap_training_',
+                 # ifelse(include_cov == TRUE, 'withcov_', 'nocov_'),
+                 # selected_model,
+                 # ifelse(data_iteration == 1, '_firstsub', '_secondsub'),
+                 # '.pdf')
+
+#pdf(out.file, width = 12, height = 18)
+ 
+#pdf("test.pdf", width=12, height=18)
+draw(ht)
+```
+
+```{r heatmap1, echo=FALSE, fig.width = 12, fig.height = 20, message=FALSE, warning=FALSE,dev=c("png", "pdf")}
+ht
+```
+

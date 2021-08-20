@@ -1,0 +1,1 @@
+7cd84ea888f4eb5a32ee72c44aef66c6 LUSC.snp__genome_wide_snp_6__broad_mit_edu__Level_3__segmented_scna_minus_germline_cnv_hg19__seg.seg.txt

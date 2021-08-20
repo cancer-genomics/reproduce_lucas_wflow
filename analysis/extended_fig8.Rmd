@@ -1,0 +1,115 @@
+---
+title: "Distribution of CEA scores by diagnosis group:  Extended data Figure 8"
+site: workflowr::wflow_site
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+    html_document:
+      code_folding: hide
+chunk_output_type: console
+---
+
+
+```{r caching, echo=FALSE}
+knitr::opts_chunk$set(autodep = TRUE)
+```
+
+    
+```{r packages}
+library(tidyverse)
+library(magrittr)
+library(lemon)
+library(broom)
+library(stringr)
+library(SummarizedExperiment)
+library(devtools)
+library(here)
+load_all(here("code", "rlucas"))
+##data(prediction_lucas, package="rlucas")
+##data(metadata, package="rlucas")
+```
+
+These analyses only make sense if CEA is not used as a feature.
+
+
+## CEA levels in all LUCAS cases
+
+Data-wrangling
+
+```{r cea}
+meta2  <- colData(se) %>%
+    as_tibble() %>%
+    filter(assigned_group %in% c(2, 3)) %>%
+    select(-c(packyears, smoking_status, age,
+              days_alive, survival,
+              il6, crp, ykl40,
+              m_stage, n_stage, t_stage))
+nocancer <- filter(meta2, assigned_group==2) %>%
+    mutate(diagnosis_group=patient_type)
+cancer <- filter(meta2, assigned_group==3) %>%
+    mutate(diagnosis_group=stage)
+histologies <- c("Squamous", "Adenocarcinoma",
+                 "Metastasis from another primary cancer",
+                 "SCLC",
+                 "Adenosquamous")
+histology <- filter(meta2, assigned_group==3) %>%
+    mutate(diagnosis_group=histology) %>%
+    filter(diagnosis_group %in% histologies)
+grouplevels <- c("no baseline cancer",
+                 "benign",
+                 "I",
+                 "II",
+                 "III",
+                 "IV",
+                 "Adenocarcinoma",
+                 "Squamous",
+                 "SCLC",
+                 "Metastasis from another primary cancer")
+combined <- bind_rows(nocancer,
+                      cancer) %>%
+    bind_rows(histology) %>%
+    mutate(diagnosis_group=factor(diagnosis_group,
+                                  levels=grouplevels)) %>%
+    filter(!is.na(diagnosis_group))
+base_size <- 22
+Ns <- combined %>%
+    group_by(diagnosis_group) %>%
+    summarize(n=n(), .groups="drop") %>%
+    pull(n)
+Nlabel <- paste0("n=", Ns)
+ticklabels <- c("No biopsy", "Benign nodule",
+                "I", "II", "III", "IV",
+                "Adenocarcinoma",
+                "Squamous",
+                "SCLC",
+                "Lung metastases") %>%
+    paste0(., "\n", Nlabel)
+```
+
+```{r cea_nlratio, fig.width=15, fig.height=12,dev=c("png", "pdf")}
+rename <- dplyr::rename
+combined2 <- combined %>%
+    rename(NLratio=neutrophile_wbc_ratio) %>%
+    pivot_longer(cols=c(cea), 
+                 names_to="analyte", values_to="value") %>%
+    select(diagnosis_group, analyte, value)
+
+analyte_labels <- setNames(c("CEA (ng/ml)"),
+                           c("CEA"))
+
+ggplot(combined2, aes(diagnosis_group, value)) +
+    geom_jitter(width=0.1, color="gray", height=0.01) +
+    geom_boxplot(fill="steelblue", alpha=0.3,
+                 outlier.shape=NA,
+                 width=0.2) +
+    theme_classic(base_size=base_size)  +
+    scale_y_log10() + ##breaks=c(7.5, 10, 100, 1000)) +
+    scale_x_discrete(labels=ticklabels) +
+    ##geom_hline(yintercept=7.5, linetype="dashed") +
+    xlab("") +
+    facet_rep_grid(analyte ~., switch="y", scales="free_y",
+                   labeller=labeller(analyte=analyte_labels)) +
+    theme(strip.placement="outside",
+          strip.background=element_blank()) +
+    ylab("CEA (ng/ml)")
+```
+

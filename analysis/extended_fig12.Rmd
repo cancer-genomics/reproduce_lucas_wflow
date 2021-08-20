@@ -1,0 +1,101 @@
+---
+title: "Kaplan-Meier curves by dichotomized DELFI score"
+site: workflowr::wflow_site
+output:
+  workflowr::wflow_html:
+    toc: true
+    code_folding: hide
+editor_options:
+  chunk_output_type: console
+---
+
+
+
+Patients with stage IV adenocarcinoma of the lung. 
+
+```{r packages, message=FALSE}
+library(SummarizedExperiment)
+library(tidyverse)
+library(magrittr)
+library(stringr)
+library(survival)
+library(survminer)
+library(ggplot2)
+library(readxl)
+library(tidyr)
+library(broom)
+library(gridExtra)
+library(kableExtra)
+library(tidyr)
+library(devtools)
+library(here)
+load_all(here("code", "rlucas"))
+data(se, package="rlucas")
+```
+
+```{r fig12a,dev=c("png", "pdf")}
+Extended_Data_Fig_12_recurrence_analysis <- read_excel(here("data","Extended Data Fig.12_recurrence_analysis.xlsx"))
+a<-Extended_Data_Fig_12_recurrence_analysis
+
+a$`Recurrence status`<-as.factor(a$`Recurrence status`)
+
+b<-ggplot(a,aes(x=`Recurrence status`,y=`DELFI score`))+geom_jitter(width=0.1, color="gray", height=0.01)+ geom_boxplot(fill="steelblue", alpha=0.3, outlier.shape=NA, width=0.2) + theme_classic()
+c<-b+theme(axis.text.x = element_text(size=16, face="bold"),axis.text.y = element_text(size=16, face="bold"))
+c+theme(axis.title.x = element_blank())+scale_y_continuous(breaks = c(0,0.2, 0.4,0.6,0.8,1))+ylab("DELFI Score")+scale_x_discrete(labels=c("0" = "No recurrence", "1" = "Clinical recurrence"))
+
+
+```
+
+```{r data}
+Extended_Data_Fig_12_recurrence_analysis <- read_excel(here("data","Extended Data Fig.12_recurrence_analysis copy.xlsx"))
+a<-Extended_Data_Fig_12_recurrence_analysis
+
+coldat <- a %>%
+    as_tibble()
+```
+
+# Kaplan-Meier curves
+
+```{r survcurve_seq, fig.width=10, fig.height=9,dev=c("png", "pdf")}
+Ns <- coldat %>%
+    group_by(DELFI_status) %>%
+    summarize(n=n(), .groups="drop") %>%
+    mutate(DELFI_status=ifelse(DELFI_status==1, "DELFI positive", 'DELFI negative'))
+
+labs <- as.expression(paste0(Ns$DELFI_status, " (n=", Ns$n, ")"))
+surv <- with(coldat, Surv(Years_blood, Recurrence_status))
+fit <- survfit(surv ~ DELFI_status, data = coldat)
+
+fig <- ggsurvplot(fit, data = coldat,
+           surv.median.line = "hv", ## Add medians survival
+           ## Add p-value and tervals
+           pval = FALSE,
+           conf.int = FALSE,
+           ## Add risk table
+           risk.table = FALSE,
+           tables.height = 0.2,
+           tables.theme = theme_cleantable(),
+           axes.offset=FALSE,
+           ## Color palettes. Use custom color: c("#E7B800", "#2E9FDF"),
+           ## or brewer color (e.g.: "Dark2"), or ggsci color (e.g.: "jco")
+           ##palette = c("#E7B800", "#2E9FDF"),
+           legend=c(0.75, 0.8),
+           legend.title="", 
+           palette=c("blue", "red"),
+           legend.labs=labs,
+           ggtheme = theme_classic(base_size=20) # Change ggplot2 theme
+           ) +
+    ylab("Progression free survival\n") +
+    xlab("Years")
+
+X2 <- survdiff(Surv(Years_blood, Recurrence_status) ~ DELFI_status, data=coldat)$chisq
+p <- round(1-pchisq(X2, df=1), 4)
+#if(p < 0.01){
+ #   plabel <- "P < 0.01"
+#} else plabel <- paste0("P = ", round(p, 3))
+plabel <- paste0("P = ", round(p, 3))
+fig$plot <- fig$plot + annotate("text", x=4.6, y=0.7, label=plabel,
+                                size=5)
+print(fig$plot)
+```
+

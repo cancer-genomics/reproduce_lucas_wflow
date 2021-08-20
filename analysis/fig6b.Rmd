@@ -1,0 +1,119 @@
+---
+title: "Sensitivity of DELFI, LDCT, and combined approaches in LUCAS"
+site: workflowr::wflow_site
+output:
+  workflowr::wflow_html:
+    code_folding: hide
+    toc: true
+editor_options:
+  chunk_output_type: console
+---
+
+
+```{r caching, echo=FALSE}
+knitr::opts_chunk$set(autodep = TRUE, echo=FALSE)
+```
+
+```{r packages, message=FALSE}
+library(RColorBrewer)
+library(ggplot2)
+library(tidyverse)
+library(dplyr)
+library(readxl)
+library(magrittr)
+library(grid)
+library(gridExtra)
+library(here)
+library(hrbrthemes)
+library(viridis)
+library(kableExtra)
+```
+
+The data for this figure was shared in slack on 3/07/2021 and copied to the data subfolder.
+
+# 90% CI
+
+```{r read_data}
+training_sets <- c("LUCAS cohort",
+                   "LUCAS cohort w/o prior cancer")
+dat <- read_excel(here("data",
+                       "sensitivity, specificity numbers in LUCAS_03_07_21.xlsx")) %>%
+    set_colnames(c("group", "n", "y", "method", "training")) %>%
+    group_by(method, training) %>%
+    nest() %>%
+    mutate(training=ifelse(training==1, training_sets[1],
+                           training_sets[2]),
+           training=factor(training, training_sets))
+replace_group <- function(x){
+    ylabels <- c(c("Overall", "I", "II", "III", "IV"),
+                 c("Overall", "I", "II", "III", "IV"),
+                 c("SCLC", "Squam", "Lung\nmets"))
+    cancer_group <- c(rep("All", 5),
+                      rep("Other", 5),
+                      rep("Other", 3))
+    x2 <- x %>%
+        mutate(ylabel=ylabels,
+               yvar=c(rep(1:5, 2), 6:8),
+               cancer_group=cancer_group) %>%
+        mutate(cancer_group=factor(cancer_group,
+                                   c("All", "Other")))
+    x2
+}
+dat$data2 <- dat$data %>%
+    map(replace_group)
+dat2 <- dat %>%
+    unnest(data2) %>%
+    select(-data) %>%
+    ungroup() %>%
+    mutate(y=ifelse(y > n, n, y)) %>%
+    mutate(lower=qbeta(0.05, 0.5 + y, n-y+0.5),
+           upper=qbeta(0.95, 0.5 + y, n-y+0.5))
+```
+
+```{r sens_table, fig.width=12, fig.height=6, dev=c("png", "pdf"), warning=FALSE}
+cols <- brewer.pal(3, "Dark2")[1:2]
+names(cols) <- training_sets
+brks <- seq(0, 1, by=0.2)
+labels <- as.character(brks)
+##names(cols) <- models[1:2]
+A <- dat2 %>%
+    mutate(yvar=factor(yvar, 1:8)) %>%
+    ggplot(aes(yvar, y/n, group=training)) +
+    geom_errorbar(aes(ymin=lower, ymax=upper,
+                      color=training),
+                  position=position_dodge(width=0.4),
+                  width=0.1) +
+    geom_point(##fill="white",
+        ##pch=21,
+               aes(size=n, color=training),
+               position=position_dodge(width=0.4)) +
+    scale_y_continuous(breaks=brks,
+                       labels=labels,
+                       limits=c(0,1)) +
+    scale_x_discrete(breaks=dat2$yvar,
+                     labels=dat2$ylabel) +
+    facet_wrap(cancer_group~method, scales="free_x") +
+    theme_bw(base_size=15) +
+    theme(panel.grid=element_blank(),
+          ##strip.background=element_blank(),
+          panel.border=element_rect(color="gray"),
+          strip.placement="outside",
+          strip.text=element_blank(),
+          axis.text.x=element_text(size=10),
+          ##strip.text.y=element_blank(),
+          legend.position="bottom") +
+    xlab("") + ylab("Sensitivity") +
+    scale_color_manual(values=cols) +
+    geom_hline(yintercept=1, linetype="dashed", color="gray") +
+    guides(color=guide_legend(title=""), fill=FALSE)
+grid.newpage()
+pushViewport(viewport(width=unit(0.95, "npc"), height=unit(0.95, "npc")))
+print(A, newpage=FALSE)
+popViewport()
+grid.text("DELFI", x=unit(0.22, "npc"), y=unit(0.98, "npc"),
+          gp=gpar(cex=1.2))
+grid.text("DELFI,LDCT", x=unit(0.52, "npc"), y=unit(0.98, "npc"),
+          gp=gpar(cex=1.2))
+grid.text(expression(DELFI[multi]*",LDCT"), x=unit(0.81, "npc"), y=unit(0.98, "npc"),
+          gp=gpar(cex=1.2))
+```

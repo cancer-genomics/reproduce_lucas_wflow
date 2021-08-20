@@ -1,0 +1,239 @@
+---
+title: "Fig 2c"
+site: workflowr::wflow_site
+output: html_document
+chunk_output_type: console
+  ---
+
+
+```{r packages, echo=FALSE, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(caret)
+library(recipes)
+library(pROC)
+library(devtools)
+library(reshape2)
+library(plyr)
+library(gridExtra)
+library(grid)
+library(here)
+load_all(here("code", "rlucas"))
+features <- read_csv(here("data", "training-set.csv"))
+#multinucs <- bins5mb %>% group_by(id) %>% summarize(multinucratio = sum(multinucs)/(sum(short+long)))
+#features <- inner_join(multinucs, features, by="id")
+
+labels <- meta %>% select(id, assigned_group)
+labels <- labels %>% filter(assigned_group != 1) %>%
+    mutate(type = ifelse(assigned_group==2, "healthy", "cancer")) %>%
+    select(-assigned_group)
+
+features <- inner_join(labels, features, by=c("id"="id"))
+features <- features  %>% select(-starts_with("cov_"))
+
+features <- features %>% mutate(clinical_smokingstatus=factor(clinical_smokingstatus,
+                                                              c("never", "former", "current")),
+                                clinical_COPD=as.integer(clinical_COPD))
+
+###
+model_seq <- readRDS(here("data", "model_seq_glm.rds"))
+
+model_seq$levels
+# [1] "cancer"  "healthy"
+# this indicates that the higher level is healthy and that's coded as 1 in logistic regression
+# need to flip the coefficient signs
+
+orig_coefs <- coef(model_seq$finalModel, s = model_seq$bestTune$lambda) * (-1)
+# model_seq$results
+#   alpha      lambda       ROC      Sens      Spec      ROCSD     SensSD     SpecSD
+# 1     1 0.001668101 0.8901336 0.7250154 0.9077218 0.03524273 0.08742105 0.06064522
+
+#-------------------------------------------------------------------------------------------------------#
+# # # we need to rescale the original coefficients by the variables' standard deviations such that we can #
+# # # make coefficient values a proxy for features' importance
+```
+
+```{r setup}
+
+pr <- prep(model_seq$recipe)
+model_input <- bake(pr, new_data = model_seq$trainingData)
+
+feature_means <- model_input  %>% select(-c(id, type)) %>% colMeans()
+feature_sds <- model_input %>% select(-c(id, type)) %>% as.data.frame() %>% summarise_all(sd)
+
+feature_coefs <- data.frame(features = names(feature_sds), sd = as.numeric(feature_sds))
+feature_coefs <- merge(feature_coefs,
+	                   data.frame(features = rownames(orig_coefs),
+	                   	          orig_coefs = as.numeric(orig_coefs)),
+	                   by = 'features', all.x = TRUE)
+feature_coefs$scaled_coefs <- feature_coefs$orig_coefs * feature_coefs$sd
+```
+
+```{r sample.set.annotation, echo=FALSE,dev=c("png", "pdf")}
+# PC heatmap-----------
+# extract the PC loadings
+loadings <- data.frame(tidy(pr, number = 2))
+loadings <- dcast(loadings, terms ~ component, value.var = 'value')
+loadings$bin.id <- as.numeric(gsub('ratio_', '', loadings$terms))
+loadings <- loadings[with(loadings, order(bin.id)),]
+# only keep PC1 to PC11 given that these terms make the cut for the threshold
+loadings <- loadings[,c('terms', 'bin.id', sapply(seq(11), function(x) paste0('PC', x)))]
+
+
+# now work on visualization of the loadings
+pd <- loadings[,! colnames(loadings) %in% c('terms')]
+pd <- melt(pd, id.vars = c('bin.id'))
+pd$pc.id <- as.numeric(gsub('PC', '', pd$variable))
+# annotate pd with chromosome arm and position
+data(lucas_5mb)
+locs <- unique(bins5mb[,c('bin', 'chr', 'start', 'end', 'arm')])
+locs$pos <- apply(locs[,c('start', 'end')], 1, mean)
+pd <- merge(pd, locs[,c('chr','pos','arm', 'bin')],
+	by.x = 'bin.id', by.y = 'bin', all.x = TRUE)
+pd$arm <- factor(pd$arm, levels = unique(locs$arm))
+
+non.zeros <- as.character(subset(feature_coefs, scaled_coefs != 0)$features)
+# Importance barplot------------
+sc <- feature_coefs
+sc$abs.value = abs(sc$scaled_coefs)
+sc$sign.value = factor(sign(sc$scaled_coefs), levels = c(-1, 1))
+sc$feature.type <- sapply(sc$features, function(x) strsplit(as.character(x), split = '_')[[1]][1])
+sc$feature.type <- factor(sc$feature.type, levels = c('zscore', 'ratio'))
+sc <- sc[with(sc, order(-abs.value, feature.type)),]
+sc$features <- factor(sc$features, levels = sc$features)
+sc <- subset(sc, scaled_coefs != 0)
+
+# determine feature order for the heatmap figure
+f <- levels(sc$features)
+pd$pc.id <- factor(as.character(pd$pc.id),
+                   levels = as.character(as.numeric(gsub('ratio_pc_', '', f[grepl('ratio', f)]))))
+
+sc$features <- gsub('zscore_', 'Z ', gsub('ratio_pc_', 'PC ', sc$features))
+sc$features <- gsub('PC 0', 'PC', sc$features)
+sc$features <- factor(sc$features , levels = sc$features)
+
+#---------------- now make plots -----------------#
+# visualize feature by PC heatmap
+heatmap <- ggplot(pd, aes(x = pc.id, y = bin.id)) +
+    facet_grid(arm ~ pc.id, scales = 'free', switch = 'y', space = 'free')+
+    geom_tile(aes(fill = value)) +
+    scale_fill_distiller(palette = 'RdBu') +
+    scale_y_continuous(trans = 'reverse') +
+    theme_minimal() +
+    labs(x = 'PC', y = 'Ratio Bins', fill = 'Value') +
+    theme(strip.text.x = element_blank(),
+          strip.text.y.left = element_text(size = 14, angle = 0, hjust = 0.5, vjust = 0.5),
+          axis.text.y = element_blank(),
+          axis.ticks = element_blank(),
+          panel.border = element_rect(color = "black", fill = NA, size = 0.2),
+          panel.grid =  element_blank(),
+          legend.position = 'none')
+
+#-------------------------------------------------------------------------------------------------------#
+# top annotation
+ta <- subset(sc, grepl('PC', features))
+ta$pc.id <- gsub('PC', '', gsub(' ','',ta$features))
+ta$sign.value = factor(ta$sign.value, levels = c(-1, 1))
+ta <- ta[,c('pc.id', 'abs.value', 'sign.value')]
+ta <- rbind(ta, data.frame(pc.id = setdiff(seq(11), ta$pc.id), abs.value =0, sign.value = NA))
+ta$pc.id <- factor(ta$pc.id, levels = ta$pc.id)
+ta$x = 1
+
+cols <- c('#0571b0', '#ca0020', '#999999')
+names(cols) <- c('-1', '1', NA)
+ta$arm = 1
+top.annot <- ggplot(ta, aes(x = pc.id, y = abs.value, colour = sign.value)) +
+      facet_grid(arm ~ pc.id, scales = 'free', switch = 'y', space = 'free') +
+      geom_point(size = 2) +
+      geom_segment(aes(x = pc.id, xend = pc.id, y = abs.value, yend = 0)) +
+      theme_minimal() +
+      labs(x = '', y = '', fill = '') +
+      theme(strip.text.y.left = element_blank(),
+            strip.text.x = element_blank(),
+        axis.text.x = element_text(),
+        axis.text.y = element_text(size = 11),
+        axis.ticks = element_blank(),
+        panel.border = element_rect(color = "white", fill = NA, size = 0.2),
+        legend.position = 'none') +
+     scale_color_manual(values = cols, na.value = '#999999')
+#-------------------------------------------------------------------------------------------------------#
+# side annotation --> bin importance
+bl <- unique(pd[,c('chr','pos', 'bin.id', 'arm')])
+bl$x = 1
+arm.imp <- ddply(bl, .(arm), summarize, bin.id = mean(bin.id), x = mean(x))
+
+arm.coef <- subset(sc, ! grepl('PC', features))[,c('features', 'abs.value', 'sign.value')]
+arm.coef$arm <- gsub('Z ', '', arm.coef$features)
+arm.coef$features <- NULL
+arm.coef <- rbind(arm.coef,
+                  data.frame(abs.value = 0, sign.value = NA, arm = setdiff(unique(locs$arm), arm.coef$arm)))
+
+arm.imp <- merge(arm.imp, arm.coef[,c('arm', 'abs.value', 'sign.value')], by = 'arm', all.x = TRUE)
+
+bl$pc.id <- 1
+right.annot <- ggplot(bl, aes(x = x, y = bin.id)) +
+  geom_point(color = 'white') +
+  facet_grid(arm ~ pc.id, scales = 'free', switch = 'y', space = 'free') +
+  theme_minimal() +
+  geom_point(data = arm.imp, aes(x = abs.value, y = bin.id, color = sign.value)) +
+  geom_segment(data = arm.imp, aes(x = abs.value, xend = 0, y = bin.id, yend = bin.id, color = sign.value)) +
+  scale_color_manual(values = cols, na.value = '#999999') +
+  scale_y_continuous(breaks = c(0,2,4,6)) +
+  labs(x = '', y = '', color = '') +
+  theme(strip.text.x = element_blank(),
+        strip.text.y.left = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks = element_blank(),
+        panel.border = element_blank(),
+        panel.grid.minor.y  = element_blank(),
+        panel.grid.major.y = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        legend.position = 'none')
+
+
+
+barplot <- ggplot(sc, aes(x = features, y = abs.value, fill = feature.type, color = sign.value)) +
+            geom_bar(stat = 'identity') +
+            theme_minimal() +
+            scale_y_continuous(expand = c(0,0)) +
+            scale_color_manual(values = c('#0571b0', '#ca0020'), name = 'Coefficient Sign') +
+            scale_fill_brewer(palette = 'Greys', name = 'Feature Type') +
+            theme(axis.text.x = element_text(angle =90, hjust = 0.5, vjust = 0.5),
+            	     panel.grid.major.x = element_blank() ,
+            	     panel.grid.minor.x = element_blank()) +
+            labs(x = 'Features', y = 'Standardized Coefficients')
+
+#-------------------------------------------------------------------------------------------------------#
+# store figures
+
+#setwd('../docs/figure/feature_importance.R')
+
+x1 = ggplotGrob(heatmap)
+x2 = ggplotGrob(right.annot)
+x3 = ggplotGrob(top.annot)
+
+x2$heights = x1$heights
+x3$widths = x1$widths
+
+p1 = arrangeGrob(x1, x2, ncol = 2, widths = c(15, 3))
+p2 = arrangeGrob(x3, x1, ncol = 1, heights = c(3,20))
+p3=arrangeGrob(x3, p1, ncol = 1, heights = c(3,20))
+```
+
+```{r heatmap, echo=FALSE, fig.width = 12, fig.height = 20, message=FALSE, warning=FALSE,dev=c("png", "pdf")}
+#pdf('PC_heatmap_importance_bottom_row_v2.pdf', height = 20, width = 12)
+grid.newpage()
+grid.draw(p1)
+dev.off()
+```
+```{r heatmap2, echo=FALSE, fig.width = 10, fig.height = 23, message=FALSE, warning=FALSE,dev=c("png", "pdf")}
+#pdf('PC_heatmap_importance_left_col_v2.pdf', height = 23, width = 10)
+grid.newpage()
+grid.draw(p2)
+dev.off()
+```
+```{r heatmap3, echo=FALSE, fig.width = 10, fig.height = 23, message=FALSE, warning=FALSE,dev=c("png", "pdf")}
+#pdf('PC_heatmap_importance_left_col_v2.pdf', height = 23, width = 10)
+grid.newpage()
+grid.draw(p3)
+dev.off()
+```
