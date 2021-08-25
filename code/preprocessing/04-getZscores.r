@@ -44,7 +44,7 @@ refbins[,cov:=short+long]
 
 binsforzscores <- rbind(refbins, x)
 binsforzscores<-countAndNormalize(binsforzscores, measure="cov")
-armmeansdt_all <- PlasmaTools:::getArmMeans(binsforzscores)
+armmeansdt_all <- PlasmaTools.lucas:::getArmMeans(binsforzscores)
 armmeansdt_ref <- armmeansdt_all %>% filter(id %in% refids)
 armmeansdt_lucas <- armmeansdt_all %>% filter(!id %in% refids)
 stats <- armmeansdt_ref %>% group_by(arm) %>% dplyr::summarize(Mean=mean(armmean)) 
