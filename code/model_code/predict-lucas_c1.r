@@ -9,7 +9,7 @@ load_all(here("code","rlucas"))  ## -> library(rlucas)
 ##
 
 ##features <- read_csv("../data/training-set.csv")
-features <- read_csv(here("data", "training-set.csv"))
+features <- read_csv(here("data", "training-set.csv"), show_col_types=FALSE)
 multinucs <- bins5mb %>% group_by(id) %>%
     summarize(multinucratio = sum(multinucs)/(sum(short+long)))
 features <- inner_join(multinucs, features, by="id")
@@ -37,7 +37,8 @@ recipe_full_lasso2 <- recipe(type ~ ., data=features) %>%
     update_role(id, new_role = "ID") %>%
     step_rm(clinical_YKL40, clinical_IL6, clinical_CRP, clinical_cfdna_conc,
             clinical_nlratio, multinucratio, clinical_bmi) %>%
-    step_medianimpute(clinical_packyears) %>%
+    ##step_medianimpute(clinical_packyears) %>%
+    step_impute_median(clinical_packyears) %>%
     step_log(clinical_CEA) %>%
     step_dummy(clinical_smokingstatus) %>%
     step_pca(starts_with("ratio_"), prefix = "ratio_pc_",  threshold=0.90) %>%
@@ -62,32 +63,46 @@ model_seq <- caret::train(recipe_seq,
                           data = features,
                           method = "glmnet",
                           tuneGrid = glmnetGrid,
-                          trControl = ctrl)
+                          trControl = ctrl,
+                          metric="ROC")
 
 
 model_full_lasso2 <- caret::train(recipe_full_lasso2,
                           data = features,
                           method = "glmnet",
                           tuneGrid = glmnetGrid,
-                          trControl = ctrl)
+                          trControl = ctrl,
+                          metric="ROC")
 
 
-features <- features %>% mutate(rowIndex = 1:n())
+features <- features %>% mutate(rowIndex = seq_len(nrow(.)))
 ids <- inner_join(features %>% select(id, rowIndex), labels, by="id")
 
 pred.full.lasso2 <- model_full_lasso2$pred
-pred.full.lasso2 <- pred.full.lasso2 %>% group_by(rowIndex) %>% summarize(score.full.lasso2 = mean(cancer))
+pred.full.lasso2 <- pred.full.lasso2 %>%
+    group_by(rowIndex) %>%
+    summarize(score.full.lasso2 = mean(cancer))
 
 pred.seq <- model_seq$pred
-pred.seq <- pred.seq %>% group_by(rowIndex) %>% summarize(score.seq = mean(cancer))
+pred.seq <- pred.seq %>%
+    group_by(rowIndex) %>%
+    summarize(score.seq = mean(cancer))
 
 preds <- inner_join(pred.seq, pred.full.lasso2, by="rowIndex")
 
 preds <- inner_join(ids, preds, by="rowIndex")
 
 preds <- preds %>% select(-rowIndex)
-save(preds, file="prediction_lucas_c1.rda")
+##save(preds, file="prediction_lucas_c1.rda")
 
-saveRDS(model_seq, "../models_c1/model_seq_glm.rds")
-saveRDS(model_full_lasso2, "../models_c1/model_full_lasso2.rds")
+##saveRDS(model_seq, "../models_c1/model_seq_glm.rds")
+saveRDS(model_seq, here("code", "models_c1/model_seq_glm.rds"))
+saveRDS(model_full_lasso2, here("code", "models_c1/model_full_lasso2.rds"))
 
+tmp <- readRDS(here("code", "models_c1", "model_seq_glm.rds"))
+pr <- prep(tmp$recipe)
+traindat <- model_seq$trainingData %>%
+    mutate(id=factor(id),
+           type=factor(type))
+model_input <- bake(pr, new_data = traindat)
+loadings <- data.frame(tidy(pr, number = 2))
