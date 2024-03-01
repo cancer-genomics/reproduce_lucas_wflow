@@ -13,8 +13,8 @@
 
 <title>About</title>
 
-<script src="site_libs/header-attrs-2.8/header-attrs.js"></script>
-<script src="site_libs/jquery-1.11.3/jquery.min.js"></script>
+<script src="site_libs/header-attrs-2.25/header-attrs.js"></script>
+<script src="site_libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link href="site_libs/bootstrap-3.3.5/css/cosmo.min.css" rel="stylesheet" />
 <script src="site_libs/bootstrap-3.3.5/js/bootstrap.min.js"></script>
@@ -32,10 +32,10 @@
 <script src="site_libs/navigation-1.1/tabsets.js"></script>
 <link href="site_libs/highlightjs-9.12.0/textmate.css" rel="stylesheet" />
 <script src="site_libs/highlightjs-9.12.0/highlight.js"></script>
-<link href="site_libs/font-awesome-5.1.0/css/all.css" rel="stylesheet" />
-<link href="site_libs/font-awesome-5.1.0/css/v4-shims.css" rel="stylesheet" />
+<link href="site_libs/font-awesome-6.4.2/css/all.min.css" rel="stylesheet" />
+<link href="site_libs/font-awesome-6.4.2/css/v4-shims.min.css" rel="stylesheet" />
 
-<link rel="icon" href="https://github.com/workflowr/workflowr-assets/raw/master/img/reproducible.png">
+<link rel="icon" href="https://github.com/workflowr/workflowr-assets/raw/main/img/reproducible.png">
 <!-- Add a small amount of space between sections. -->
 <style type="text/css">
 div.section {
@@ -72,6 +72,7 @@ if (window.hljs) {
 
 
 
+
 <style type = "text/css">
 .main-container {
   max-width: 940px;
@@ -92,6 +93,9 @@ button.code-folding-btn:focus {
 }
 summary {
   display: list-item;
+}
+details > summary > p:only-child {
+  display: inline;
 }
 pre code {
   padding: 0;
@@ -149,11 +153,15 @@ $(document).ready(function () {
     href = "index.html";
   var menuAnchor = $('a[href="' + href + '"]');
 
-  // mark it active
-  menuAnchor.tab('show');
-
-  // if it's got a parent navbar menu mark it active as well
-  menuAnchor.closest('li.dropdown').addClass('active');
+  // mark the anchor link active (and if it's in a dropdown, also mark that active)
+  var dropdown = menuAnchor.closest('li.dropdown');
+  if (window.bootstrap) { // Bootstrap 4+
+    menuAnchor.addClass('active');
+    dropdown.find('> .dropdown-toggle').addClass('active');
+  } else { // Bootstrap 3
+    menuAnchor.parent().addClass('active');
+    dropdown.addClass('active');
+  }
 
   // Navbar adjustments
   var navHeight = $(".navbar").first().height() + 15;
@@ -182,8 +190,8 @@ $(document).ready(function () {
   border-radius: 4px;
 }
 
-.tabset-dropdown > .nav-tabs > li.active:before {
-  content: "";
+.tabset-dropdown > .nav-tabs > li.active:before, .tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "\e259";
   font-family: 'Glyphicons Halflings';
   display: inline-block;
   padding: 10px;
@@ -191,16 +199,9 @@ $(document).ready(function () {
 }
 
 .tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
-  content: "&#xe258;";
-  border: none;
-}
-
-.tabset-dropdown > .nav-tabs.nav-tabs-open:before {
-  content: "";
+  content: "\e258";
   font-family: 'Glyphicons Halflings';
-  display: inline-block;
-  padding: 10px;
-  border-right: 1px solid #ddd;
+  border: none;
 }
 
 .tabset-dropdown > .nav-tabs > li.active {
@@ -244,7 +245,7 @@ $(document).ready(function () {
 <div class="navbar navbar-default  navbar-fixed-top" role="navigation">
   <div class="container">
     <div class="navbar-header">
-      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-bs-toggle="collapse" data-target="#navbar" data-bs-target="#navbar">
         <span class="icon-bar"></span>
         <span class="icon-bar"></span>
         <span class="icon-bar"></span>
@@ -266,7 +267,7 @@ $(document).ready(function () {
       <ul class="nav navbar-nav navbar-right">
         <li>
   <a href="https://github.com/cancer-genomics/reproduce_lucas_wflow">
-    <span class="fas fa-github"></span>
+    <span class="fa fa-github"></span>
      
     Source code
   </a>
@@ -287,7 +288,9 @@ $(document).ready(function () {
 
 <p>
 <button type="button" class="btn btn-default btn-workflowr btn-workflowr-report" data-toggle="collapse" data-target="#workflowr-report">
-<span class="glyphicon glyphicon-list" aria-hidden="true"></span> workflowr <span class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span>
+<span class="glyphicon glyphicon-list" aria-hidden="true"></span>
+workflowr <span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span>
 </button>
 </p>
 <div id="workflowr-report" class="collapse">
@@ -296,7 +299,9 @@ $(document).ready(function () {
 <a data-toggle="tab" href="#summary">Summary</a>
 </li>
 <li>
-<a data-toggle="tab" href="#checks"> Checks <span class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span> </a>
+<a data-toggle="tab" href="#checks"> Checks <span
+class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span>
+</a>
 </li>
 <li>
 <a data-toggle="tab" href="#versions">Past versions</a>
@@ -305,17 +310,27 @@ $(document).ready(function () {
 <div class="tab-content">
 <div id="summary" class="tab-pane fade in active">
 <p>
-<strong>Last updated:</strong> 2021-08-19
+<strong>Last updated:</strong> 2024-03-01
 </p>
 <p>
-<strong>Checks:</strong> <span class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span> 2 <span class="glyphicon glyphicon-exclamation-sign text-danger" aria-hidden="true"></span> 0
+<strong>Checks:</strong> <span
+class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span> 2
+<span class="glyphicon glyphicon-exclamation-sign text-danger"
+aria-hidden="true"></span> 0
 </p>
 <p>
-<strong>Knit directory:</strong> <code>reproduce_lucas_wflow/</code> <span class="glyphicon glyphicon-question-sign" aria-hidden="true" title="This is the local directory in which the code in this file was executed."> </span>
+<strong>Knit directory:</strong> <code>reproduce_lucas_wflow/</code>
+<span class="glyphicon glyphicon-question-sign" aria-hidden="true"
+title="This is the local directory in which the code in this file was executed.">
+</span>
 </p>
 <p>
-This reproducible <a href="http://rmarkdown.rstudio.com">R Markdown</a> analysis was created with <a
-  href="https://github.com/jdblischak/workflowr">workflowr</a> (version 1.6.2). The <em>Checks</em> tab describes the reproducibility checks that were applied when the results were created. The <em>Past versions</em> tab lists the development history.
+This reproducible <a href="https://rmarkdown.rstudio.com">R Markdown</a>
+analysis was created with <a
+  href="https://github.com/workflowr/workflowr">workflowr</a> (version
+1.7.1). The <em>Checks</em> tab describes the reproducibility checks
+that were applied when the results were created. The <em>Past
+versions</em> tab lists the development history.
 </p>
 <hr>
 </div>
@@ -324,124 +339,76 @@ This reproducible <a href="http://rmarkdown.rstudio.com">R Markdown</a> analysis
 <div class="panel panel-default">
 <div class="panel-heading">
 <p class="panel-title">
-<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRMarkdownfilestronguptodate"> <span class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span> <strong>R Markdown file:</strong> up-to-date </a>
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRMarkdownfilestronguptodate">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>R Markdown file:</strong> up-to-date
+</a>
 </p>
 </div>
-<div id="strongRMarkdownfilestronguptodate" class="panel-collapse collapse">
+<div id="strongRMarkdownfilestronguptodate"
+class="panel-collapse collapse">
 <div class="panel-body">
-<p>Great! Since the R Markdown file has been committed to the Git repository, you know the exact version of the code that produced these results.</p>
+<p>Great! Since the R Markdown file has been committed to the Git
+repository, you know the exact version of the code that produced these
+results.</p>
 </div>
 </div>
 </div>
 <div class="panel panel-default">
 <div class="panel-heading">
 <p class="panel-title">
-<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrong4f74274"> <span class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span> <strong>Repository version:</strong> 4f74274 </a>
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomcancergenomicsreproducelucaswflowtreed71c8acbbc76834c3ab0e5c686ed4b664b054ddftargetblankd71c8aca">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Repository version:</strong>
+<a href="https://github.com/cancer-genomics/reproduce_lucas_wflow/tree/d71c8acbbc76834c3ab0e5c686ed4b664b054ddf" target="_blank">d71c8ac</a>
+</a>
 </p>
 </div>
-<div id="strongRepositoryversionstrong4f74274" class="panel-collapse collapse">
+<div
+id="strongRepositoryversionstrongahrefhttpsgithubcomcancergenomicsreproducelucaswflowtreed71c8acbbc76834c3ab0e5c686ed4b664b054ddftargetblankd71c8aca"
+class="panel-collapse collapse">
 <div class="panel-body">
 <p>
-Great! You are using Git for version control. Tracking code development and connecting the code version to the results is critical for reproducibility.
+Great! You are using Git for version control. Tracking code development
+and connecting the code version to the results is critical for
+reproducibility.
 </p>
 <p>
-The results in this page were generated with repository version 4f74274. See the <em>Past versions</em> tab to see a history of the changes made to the R Markdown and HTML files.
+The results in this page were generated with repository version
+<a href="https://github.com/cancer-genomics/reproduce_lucas_wflow/tree/d71c8acbbc76834c3ab0e5c686ed4b664b054ddf" target="_blank">d71c8ac</a>.
+See the <em>Past versions</em> tab to see a history of the changes made
+to the R Markdown and HTML files.
 </p>
 <p>
-Note that you need to be careful to ensure that all relevant files for the analysis have been committed to Git prior to generating the results (you can use <code>wflow_publish</code> or <code>wflow_git_commit</code>). workflowr only checks the R Markdown file, but you know if there are other scripts or data files that it depends on. Below is the status of the Git repository when the results were generated:
+Note that you need to be careful to ensure that all relevant files for
+the analysis have been committed to Git prior to generating the results
+(you can use <code>wflow_publish</code> or
+<code>wflow_git_commit</code>). workflowr only checks the R Markdown
+file, but you know if there are other scripts or data files that it
+depends on. Below is the status of the Git repository when the results
+were generated:
 </p>
 <pre><code>
 Ignored files:
-    Ignored:    analysis/.DS_Store
-    Ignored:    code/.DS_Store
-    Ignored:    data/.DS_Store
+    Ignored:    .Rhistory
 
 Untracked files:
-    Untracked:  LICENSE
-    Untracked:  README.Rmd
-    Untracked:  analysis/SessionInfo.Rmd
-    Untracked:  analysis/extended_fig10a.Rmd
-    Untracked:  analysis/extended_fig10ab.Rmd
-    Untracked:  analysis/extended_fig10cd.Rmd
-    Untracked:  analysis/extended_fig11.Rmd
-    Untracked:  analysis/extended_fig12.Rmd
-    Untracked:  analysis/extended_fig2ab.Rmd
-    Untracked:  analysis/extended_fig2c.Rmd
-    Untracked:  analysis/extended_fig3.Rmd
-    Untracked:  analysis/extended_fig4.Rmd
-    Untracked:  analysis/extended_fig5.Rmd
-    Untracked:  analysis/extended_fig6a.Rmd
-    Untracked:  analysis/extended_fig6b.Rmd
-    Untracked:  analysis/extended_fig6c.Rmd
-    Untracked:  analysis/extended_fig7.Rmd
-    Untracked:  analysis/extended_fig8.Rmd
-    Untracked:  analysis/extended_fig9.Rmd
-    Untracked:  analysis/fig2a.Rmd
-    Untracked:  analysis/fig2b.Rmd
-    Untracked:  analysis/fig2c.Rmd
-    Untracked:  analysis/fig2c_pt2.Rmd
-    Untracked:  analysis/fig3.Rmd
-    Untracked:  analysis/fig4ab.Rmd
-    Untracked:  analysis/fig4c.Rmd
-    Untracked:  analysis/fig5a.Rmd
-    Untracked:  analysis/fig5b.Rmd
-    Untracked:  analysis/fig5cdef.Rmd
-    Untracked:  analysis/fig6b.Rmd
-    Untracked:  analysis/fig6cdefg.Rmd
-    Untracked:  code/PlasmaTools.lucas/
-    Untracked:  code/model_code/
-    Untracked:  code/models_c1/
-    Untracked:  code/models_c2/
-    Untracked:  code/models_c3/
-    Untracked:  code/plot-roc.r
-    Untracked:  code/plot-roc_with_e9.r
-    Untracked:  code/prepare_tcga_plot_data.r
-    Untracked:  code/preprocessing/
-    Untracked:  code/rlucas/
-    Untracked:  code/rpcr/
-    Untracked:  data/Extended Data Fig.12_recurrence_analysis copy.xlsx
-    Untracked:  data/Extended Data Fig.12_recurrence_analysis.xlsx
-    Untracked:  data/LUCAS_metadata.xlsx
-    Untracked:  data/LUCAS_pts_50_80_py20_excluding prior cancers.xlsx
-    Untracked:  data/TCGA_Lung/
-    Untracked:  data/TNM_stage_DELFI_4a.xlsx
-    Untracked:  data/TNM_stage_DELFI_4b.xlsx
-    Untracked:  data/all_sclc_vs_all_healthy_fragment_size.txt
-    Untracked:  data/all_sclc_vs_all_healthy_tfbs_coverage.txt
-    Untracked:  data/ascl1_rel_cov_10v10.txt
-    Untracked:  data/ascl1_tpm.txt
-    Untracked:  data/cristiano-GCLOESS-lucas-cov-z-mito-orig-delfi473.rds
-    Untracked:  data/cristiano-filtered-lucas2-cov-z-mito-gcloess-orig-delfi473.rds
-    Untracked:  data/cristiano2019_tableS7.csv
-    Untracked:  data/delfi_sensitivities.csv
-    Untracked:  data/fig5_data.xlsx
-    Untracked:  data/gc_correction.R/
-    Untracked:  data/ichor, fragm length DELFI.xlsx
-    Untracked:  data/id_subtype_key.txt
-    Untracked:  data/lucas-holdout-preds.csv
-    Untracked:  data/lucas_5mbs_delfi473.csv
-    Untracked:  data/median_lengths.R/
-    Untracked:  data/model_seq_glm.rds
-    Untracked:  data/pcr_experiment.rda
-    Untracked:  data/sclc_vs_other_fragment_size.txt
-    Untracked:  data/score.seq_fig3b_filtered.rds
-    Untracked:  data/sensitivity, specificity numbers in LUCAS_03_07_21.xlsx
-    Untracked:  data/stats.rds
-    Untracked:  data/ten_sample_rel_size.txt
-    Untracked:  data/testing-set.csv
-    Untracked:  data/tfbs_coverage.txt
-    Untracked:  data/tpm.txt
-    Untracked:  data/training-set.csv
-    Untracked:  data/validation_preds.csv
+    Untracked:  CITATION
+    Untracked:  temp.rds
 
 Unstaged changes:
-    Modified:   analysis/_site.yml
-    Modified:   analysis/index.Rmd
-    Modified:   analysis/license.Rmd
+    Modified:   .Rprofile
+    Modified:   README.Rmd
+    Modified:   code/model_code/predict-lucas_c1.r
+    Modified:   code/models_c1/model_full_lasso2.rds
+    Modified:   code/models_c1/model_seq_glm.rds
+    Modified:   data/delfi_sensitivities.csv
 
 </code></pre>
 <p>
-Note that any generated files, e.g. HTML, png, CSS, etc., are not included in this status report because it is ok for generated content to have uncommitted changes.
+Note that any generated files, e.g. HTML, png, CSS, etc., are not
+included in this status report because it is ok for generated content to
+have uncommitted changes.
 </p>
 </div>
 </div>
@@ -452,7 +419,11 @@ Note that any generated files, e.g. HTML, png, CSS, etc., are not included in t
 <div id="versions" class="tab-pane fade">
 
 <p>
-These are the previous versions of the repository in which changes were made to the R Markdown (<code>analysis/about.Rmd</code>) and HTML (<code>docs/about.html</code>) files. If you’ve configured a remote Git repository (see <code>?wflow_git_remote</code>), click on the hyperlinks in the table below to view the files as they were in that past version.
+These are the previous versions of the repository in which changes were
+made to the R Markdown (<code>analysis/about.Rmd</code>) and HTML
+(<code>docs/about.html</code>) files. If you’ve configured a remote Git
+repository (see <code>?wflow_git_remote</code>), click on the hyperlinks
+in the table below to view the files as they were in that past version.
 </p>
 <div class="table-responsive">
 <table class="table table-condensed table-hover">
@@ -478,10 +449,27 @@ Message
 <tbody>
 <tr>
 <td>
+html
+</td>
+<td>
+<a href="https://rawcdn.githack.com/cancer-genomics/reproduce_lucas_wflow/afb2c3af0e917b7d2079f2701d36a2eb30e68e5d/docs/about.html" target="_blank">afb2c3a</a>
+</td>
+<td>
+shay-279
+</td>
+<td>
+2021-08-19
+</td>
+<td>
+Mathios et. al.
+</td>
+</tr>
+<tr>
+<td>
 Rmd
 </td>
 <td>
-4f74274
+<a href="https://github.com/cancer-genomics/reproduce_lucas_wflow/blob/4f7427450942b21b542f47808bfd7a9614fe9417/analysis/about.Rmd" target="_blank">4f74274</a>
 </td>
 <td>
 shay-279
@@ -505,7 +493,7 @@ Start workflowr project.
 
 <!-- Adjust MathJax settings so that all math formulae are shown using
 TeX fonts only; see
-http://docs.mathjax.org/en/latest/configuration.html.  This will make
+https://docs.mathjax.org/en/latest/web/configuration.html. This will make
 the presentation more consistent at the cost of the webpage sometimes
 taking slightly longer to load. Note that this only works because the
 footer is added to webpages before the MathJax javascript. -->

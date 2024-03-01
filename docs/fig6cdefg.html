@@ -13,8 +13,8 @@
 
 <title>Prior predictive distributions of DELFI and LDCT in screening</title>
 
-<script src="site_libs/header-attrs-2.8/header-attrs.js"></script>
-<script src="site_libs/jquery-1.11.3/jquery.min.js"></script>
+<script src="site_libs/header-attrs-2.25/header-attrs.js"></script>
+<script src="site_libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link href="site_libs/bootstrap-3.3.5/css/cosmo.min.css" rel="stylesheet" />
 <script src="site_libs/bootstrap-3.3.5/js/bootstrap.min.js"></script>
@@ -29,7 +29,7 @@
        h6 {font-size: 12px;}
        code {color: inherit; background-color: rgba(0, 0, 0, 0.04);}
        pre:not([class]) { background-color: white }</style>
-<script src="site_libs/jqueryui-1.11.4/jquery-ui.min.js"></script>
+<script src="site_libs/jqueryui-1.13.2/jquery-ui.min.js"></script>
 <link href="site_libs/tocify-1.9.1/jquery.tocify.css" rel="stylesheet" />
 <script src="site_libs/tocify-1.9.1/jquery.tocify.js"></script>
 <script src="site_libs/navigation-1.1/tabsets.js"></script>
@@ -37,10 +37,10 @@
 <script src="site_libs/highlightjs-9.12.0/highlight.js"></script>
 <script src="site_libs/kePrint-0.0.1/kePrint.js"></script>
 <link href="site_libs/lightable-0.0.1/lightable.css" rel="stylesheet" />
-<link href="site_libs/font-awesome-5.1.0/css/all.css" rel="stylesheet" />
-<link href="site_libs/font-awesome-5.1.0/css/v4-shims.css" rel="stylesheet" />
+<link href="site_libs/font-awesome-6.4.2/css/all.min.css" rel="stylesheet" />
+<link href="site_libs/font-awesome-6.4.2/css/v4-shims.min.css" rel="stylesheet" />
 
-<link rel="icon" href="https://github.com/workflowr/workflowr-assets/raw/master/img/reproducible.png">
+<link rel="icon" href="https://github.com/workflowr/workflowr-assets/raw/main/img/reproducible.png">
 <!-- Add a small amount of space between sections. -->
 <style type="text/css">
 div.section {
@@ -77,6 +77,7 @@ if (window.hljs) {
 
 
 
+
 <style type = "text/css">
 .main-container {
   max-width: 940px;
@@ -97,6 +98,9 @@ button.code-folding-btn:focus {
 }
 summary {
   display: list-item;
+}
+details > summary > p:only-child {
+  display: inline;
 }
 pre code {
   padding: 0;
@@ -154,11 +158,15 @@ $(document).ready(function () {
     href = "index.html";
   var menuAnchor = $('a[href="' + href + '"]');
 
-  // mark it active
-  menuAnchor.tab('show');
-
-  // if it's got a parent navbar menu mark it active as well
-  menuAnchor.closest('li.dropdown').addClass('active');
+  // mark the anchor link active (and if it's in a dropdown, also mark that active)
+  var dropdown = menuAnchor.closest('li.dropdown');
+  if (window.bootstrap) { // Bootstrap 4+
+    menuAnchor.addClass('active');
+    dropdown.find('> .dropdown-toggle').addClass('active');
+  } else { // Bootstrap 3
+    menuAnchor.parent().addClass('active');
+    dropdown.addClass('active');
+  }
 
   // Navbar adjustments
   var navHeight = $(".navbar").first().height() + 15;
@@ -187,8 +195,8 @@ $(document).ready(function () {
   border-radius: 4px;
 }
 
-.tabset-dropdown > .nav-tabs > li.active:before {
-  content: "";
+.tabset-dropdown > .nav-tabs > li.active:before, .tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "\e259";
   font-family: 'Glyphicons Halflings';
   display: inline-block;
   padding: 10px;
@@ -196,16 +204,9 @@ $(document).ready(function () {
 }
 
 .tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
-  content: "&#xe258;";
-  border: none;
-}
-
-.tabset-dropdown > .nav-tabs.nav-tabs-open:before {
-  content: "";
+  content: "\e258";
   font-family: 'Glyphicons Halflings';
-  display: inline-block;
-  padding: 10px;
-  border-right: 1px solid #ddd;
+  border: none;
 }
 
 .tabset-dropdown > .nav-tabs > li.active {
@@ -322,7 +323,7 @@ div.tocify {
 <div class="navbar navbar-default  navbar-fixed-top" role="navigation">
   <div class="container">
     <div class="navbar-header">
-      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-bs-toggle="collapse" data-target="#navbar" data-bs-target="#navbar">
         <span class="icon-bar"></span>
         <span class="icon-bar"></span>
         <span class="icon-bar"></span>
@@ -344,7 +345,7 @@ div.tocify {
       <ul class="nav navbar-nav navbar-right">
         <li>
   <a href="https://github.com/cancer-genomics/reproduce_lucas_wflow">
-    <span class="fas fa-github"></span>
+    <span class="fa fa-github"></span>
      
     Source code
   </a>
@@ -358,15 +359,18 @@ div.tocify {
 
 
 
-<h1 class="title toc-ignore">Prior predictive distributions of DELFI and LDCT in screening</h1>
-<h4 class="date">19 August, 2021</h4>
+<h1 class="title toc-ignore">Prior predictive distributions of DELFI and
+LDCT in screening</h1>
+<h4 class="date">01 March, 2024</h4>
 
 </div>
 
 
 <p>
 <button type="button" class="btn btn-default btn-workflowr btn-workflowr-report" data-toggle="collapse" data-target="#workflowr-report">
-<span class="glyphicon glyphicon-list" aria-hidden="true"></span> workflowr <span class="glyphicon glyphicon-exclamation-sign text-danger" aria-hidden="true"></span>
+<span class="glyphicon glyphicon-list" aria-hidden="true"></span>
+workflowr <span class="glyphicon glyphicon-exclamation-sign text-danger"
+aria-hidden="true"></span>
 </button>
 </p>
 <div id="workflowr-report" class="collapse">
@@ -375,7 +379,9 @@ div.tocify {
 <a data-toggle="tab" href="#summary">Summary</a>
 </li>
 <li>
-<a data-toggle="tab" href="#checks"> Checks <span class="glyphicon glyphicon-exclamation-sign text-danger" aria-hidden="true"></span> </a>
+<a data-toggle="tab" href="#checks"> Checks <span
+class="glyphicon glyphicon-exclamation-sign text-danger"
+aria-hidden="true"></span> </a>
 </li>
 <li>
 <a data-toggle="tab" href="#versions">Past versions</a>
@@ -384,17 +390,27 @@ div.tocify {
 <div class="tab-content">
 <div id="summary" class="tab-pane fade in active">
 <p>
-<strong>Last updated:</strong> 2021-08-19
+<strong>Last updated:</strong> 2024-03-01
 </p>
 <p>
-<strong>Checks:</strong> <span class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span> 6 <span class="glyphicon glyphicon-exclamation-sign text-danger" aria-hidden="true"></span> 1
+<strong>Checks:</strong> <span
+class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span> 6
+<span class="glyphicon glyphicon-exclamation-sign text-danger"
+aria-hidden="true"></span> 1
 </p>
 <p>
-<strong>Knit directory:</strong> <code>reproduce_lucas_wflow/</code> <span class="glyphicon glyphicon-question-sign" aria-hidden="true" title="This is the local directory in which the code in this file was executed."> </span>
+<strong>Knit directory:</strong> <code>reproduce_lucas_wflow/</code>
+<span class="glyphicon glyphicon-question-sign" aria-hidden="true"
+title="This is the local directory in which the code in this file was executed.">
+</span>
 </p>
 <p>
-This reproducible <a href="http://rmarkdown.rstudio.com">R Markdown</a> analysis was created with <a
-  href="https://github.com/jdblischak/workflowr">workflowr</a> (version 1.6.2). The <em>Checks</em> tab describes the reproducibility checks that were applied when the results were created. The <em>Past versions</em> tab lists the development history.
+This reproducible <a href="https://rmarkdown.rstudio.com">R Markdown</a>
+analysis was created with <a
+  href="https://github.com/workflowr/workflowr">workflowr</a> (version
+1.7.1). The <em>Checks</em> tab describes the reproducibility checks
+that were applied when the results were created. The <em>Past
+versions</em> tab lists the development history.
 </p>
 <hr>
 </div>
@@ -403,184 +419,198 @@ This reproducible <a href="http://rmarkdown.rstudio.com">R Markdown</a> analysis
 <div class="panel panel-default">
 <div class="panel-heading">
 <p class="panel-title">
-<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRMarkdownfilestronguncommittedchanges"> <span class="glyphicon glyphicon-exclamation-sign text-danger" aria-hidden="true"></span> <strong>R Markdown file:</strong> uncommitted changes </a>
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRMarkdownfilestronguptodate">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>R Markdown file:</strong> up-to-date
+</a>
 </p>
 </div>
-<div id="strongRMarkdownfilestronguncommittedchanges" class="panel-collapse collapse">
+<div id="strongRMarkdownfilestronguptodate"
+class="panel-collapse collapse">
 <div class="panel-body">
-<p>The R Markdown is untracked by Git. To know which version of the R Markdown file created these results, you’ll want to first commit it to the Git repo. If you’re still working on the analysis, you can ignore this warning. When you’re finished, you can run <code>wflow_publish</code> to commit the R Markdown file and build the HTML.</p>
+<p>Great! Since the R Markdown file has been committed to the Git
+repository, you know the exact version of the code that produced these
+results.</p>
 </div>
 </div>
 </div>
 <div class="panel panel-default">
 <div class="panel-heading">
 <p class="panel-title">
-<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongEnvironmentstrongempty"> <span class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span> <strong>Environment:</strong> empty </a>
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongEnvironmentstrongobjectspresent">
+<span class="glyphicon glyphicon-exclamation-sign text-danger"
+aria-hidden="true"></span> <strong>Environment:</strong> objects present
+</a>
 </p>
 </div>
-<div id="strongEnvironmentstrongempty" class="panel-collapse collapse">
+<div id="strongEnvironmentstrongobjectspresent"
+class="panel-collapse collapse">
 <div class="panel-body">
-<p>Great job! The global environment was empty. Objects defined in the global environment can affect the analysis in your R Markdown file in unknown ways. For reproduciblity it’s best to always run the code in an empty environment.</p>
+<p>
+The global environment had objects present when the code in the R
+Markdown file was run. These objects can affect the analysis in your R
+Markdown file in unknown ways. For reproduciblity it’s best to always
+run the code in an empty environment. Use <code>wflow_publish</code> or
+<code>wflow_build</code> to ensure that the code is always run in an
+empty environment.
+</p>
+<p>
+The following objects were defined in the global environment when these
+results were created:
+</p>
+<table class="table table-condensed table-hover">
+<thead>
+<tr>
+<th style="text-align:left;">
+Name
+</th>
+<th style="text-align:left;">
+Class
+</th>
+<th style="text-align:left;">
+Size
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+rv
+</td>
+<td style="text-align:left;">
+list
+</td>
+<td style="text-align:left;">
+2.9 Kb
+</td>
+</tr>
+</tbody>
+</table>
 </div>
 </div>
 </div>
 <div class="panel panel-default">
 <div class="panel-heading">
 <p class="panel-title">
-<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongSeedstrongcodesetseed20210819code"> <span class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span> <strong>Seed:</strong> <code>set.seed(20210819)</code> </a>
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongSeedstrongcodesetseed20210819code">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Seed:</strong>
+<code>set.seed(20210819)</code> </a>
 </p>
 </div>
-<div id="strongSeedstrongcodesetseed20210819code" class="panel-collapse collapse">
+<div id="strongSeedstrongcodesetseed20210819code"
+class="panel-collapse collapse">
 <div class="panel-body">
-<p>The command <code>set.seed(20210819)</code> was run prior to running the code in the R Markdown file. Setting a seed ensures that any results that rely on randomness, e.g. subsampling or permutations, are reproducible.</p>
+<p>The command <code>set.seed(20210819)</code> was run prior to running
+the code in the R Markdown file. Setting a seed ensures that any results
+that rely on randomness, e.g. subsampling or permutations, are
+reproducible.</p>
 </div>
 </div>
 </div>
 <div class="panel panel-default">
 <div class="panel-heading">
 <p class="panel-title">
-<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongSessioninformationstrongrecorded"> <span class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span> <strong>Session information:</strong> recorded </a>
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongSessioninformationstrongrecorded">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Session information:</strong>
+recorded </a>
 </p>
 </div>
-<div id="strongSessioninformationstrongrecorded" class="panel-collapse collapse">
+<div id="strongSessioninformationstrongrecorded"
+class="panel-collapse collapse">
 <div class="panel-body">
-<p>Great job! Recording the operating system, R version, and package versions is critical for reproducibility.</p>
+<p>Great job! Recording the operating system, R version, and package
+versions is critical for reproducibility.</p>
 </div>
 </div>
 </div>
 <div class="panel panel-default">
 <div class="panel-heading">
 <p class="panel-title">
-<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongCachestrongnone"> <span class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span> <strong>Cache:</strong> none </a>
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongCachestrongnone">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Cache:</strong> none </a>
 </p>
 </div>
 <div id="strongCachestrongnone" class="panel-collapse collapse">
 <div class="panel-body">
-<p>Nice! There were no cached chunks for this analysis, so you can be confident that you successfully produced the results during this run.</p>
+<p>Nice! There were no cached chunks for this analysis, so you can be
+confident that you successfully produced the results during this
+run.</p>
 </div>
 </div>
 </div>
 <div class="panel panel-default">
 <div class="panel-heading">
 <p class="panel-title">
-<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongFilepathsstrongrelative"> <span class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span> <strong>File paths:</strong> relative </a>
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongFilepathsstrongrelative">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>File paths:</strong> relative </a>
 </p>
 </div>
 <div id="strongFilepathsstrongrelative" class="panel-collapse collapse">
 <div class="panel-body">
-<p>Great job! Using relative paths to the files within your workflowr project makes it easier to run your code on other machines.</p>
+<p>Great job! Using relative paths to the files within your workflowr
+project makes it easier to run your code on other machines.</p>
 </div>
 </div>
 </div>
 <div class="panel panel-default">
 <div class="panel-heading">
 <p class="panel-title">
-<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrong4f74274"> <span class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span> <strong>Repository version:</strong> 4f74274 </a>
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomcancergenomicsreproducelucaswflowtreed71c8acbbc76834c3ab0e5c686ed4b664b054ddftargetblankd71c8aca">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Repository version:</strong>
+<a href="https://github.com/cancer-genomics/reproduce_lucas_wflow/tree/d71c8acbbc76834c3ab0e5c686ed4b664b054ddf" target="_blank">d71c8ac</a>
+</a>
 </p>
 </div>
-<div id="strongRepositoryversionstrong4f74274" class="panel-collapse collapse">
+<div
+id="strongRepositoryversionstrongahrefhttpsgithubcomcancergenomicsreproducelucaswflowtreed71c8acbbc76834c3ab0e5c686ed4b664b054ddftargetblankd71c8aca"
+class="panel-collapse collapse">
 <div class="panel-body">
 <p>
-Great! You are using Git for version control. Tracking code development and connecting the code version to the results is critical for reproducibility.
+Great! You are using Git for version control. Tracking code development
+and connecting the code version to the results is critical for
+reproducibility.
 </p>
 <p>
-The results in this page were generated with repository version 4f74274. See the <em>Past versions</em> tab to see a history of the changes made to the R Markdown and HTML files.
+The results in this page were generated with repository version
+<a href="https://github.com/cancer-genomics/reproduce_lucas_wflow/tree/d71c8acbbc76834c3ab0e5c686ed4b664b054ddf" target="_blank">d71c8ac</a>.
+See the <em>Past versions</em> tab to see a history of the changes made
+to the R Markdown and HTML files.
 </p>
 <p>
-Note that you need to be careful to ensure that all relevant files for the analysis have been committed to Git prior to generating the results (you can use <code>wflow_publish</code> or <code>wflow_git_commit</code>). workflowr only checks the R Markdown file, but you know if there are other scripts or data files that it depends on. Below is the status of the Git repository when the results were generated:
+Note that you need to be careful to ensure that all relevant files for
+the analysis have been committed to Git prior to generating the results
+(you can use <code>wflow_publish</code> or
+<code>wflow_git_commit</code>). workflowr only checks the R Markdown
+file, but you know if there are other scripts or data files that it
+depends on. Below is the status of the Git repository when the results
+were generated:
 </p>
 <pre><code>
 Ignored files:
-    Ignored:    analysis/.DS_Store
-    Ignored:    code/.DS_Store
-    Ignored:    data/.DS_Store
+    Ignored:    .Rhistory
 
 Untracked files:
-    Untracked:  LICENSE
-    Untracked:  README.Rmd
-    Untracked:  analysis/SessionInfo.Rmd
-    Untracked:  analysis/extended_fig10a.Rmd
-    Untracked:  analysis/extended_fig10ab.Rmd
-    Untracked:  analysis/extended_fig10cd.Rmd
-    Untracked:  analysis/extended_fig11.Rmd
-    Untracked:  analysis/extended_fig12.Rmd
-    Untracked:  analysis/extended_fig2ab.Rmd
-    Untracked:  analysis/extended_fig2c.Rmd
-    Untracked:  analysis/extended_fig3.Rmd
-    Untracked:  analysis/extended_fig4.Rmd
-    Untracked:  analysis/extended_fig5.Rmd
-    Untracked:  analysis/extended_fig6a.Rmd
-    Untracked:  analysis/extended_fig6b.Rmd
-    Untracked:  analysis/extended_fig6c.Rmd
-    Untracked:  analysis/extended_fig7.Rmd
-    Untracked:  analysis/extended_fig8.Rmd
-    Untracked:  analysis/extended_fig9.Rmd
-    Untracked:  analysis/fig2a.Rmd
-    Untracked:  analysis/fig2b.Rmd
-    Untracked:  analysis/fig2c.Rmd
-    Untracked:  analysis/fig2c_pt2.Rmd
-    Untracked:  analysis/fig3.Rmd
-    Untracked:  analysis/fig4ab.Rmd
-    Untracked:  analysis/fig4c.Rmd
-    Untracked:  analysis/fig5a.Rmd
-    Untracked:  analysis/fig5b.Rmd
-    Untracked:  analysis/fig5cdef.Rmd
-    Untracked:  analysis/fig6b.Rmd
-    Untracked:  analysis/fig6cdefg.Rmd
-    Untracked:  code/PlasmaTools.lucas/
-    Untracked:  code/model_code/
-    Untracked:  code/models_c1/
-    Untracked:  code/models_c2/
-    Untracked:  code/models_c3/
-    Untracked:  code/plot-roc.r
-    Untracked:  code/plot-roc_with_e9.r
-    Untracked:  code/prepare_tcga_plot_data.r
-    Untracked:  code/preprocessing/
-    Untracked:  code/rlucas/
-    Untracked:  code/rpcr/
-    Untracked:  data/Extended Data Fig.12_recurrence_analysis copy.xlsx
-    Untracked:  data/Extended Data Fig.12_recurrence_analysis.xlsx
-    Untracked:  data/LUCAS_metadata.xlsx
-    Untracked:  data/LUCAS_pts_50_80_py20_excluding prior cancers.xlsx
-    Untracked:  data/TCGA_Lung/
-    Untracked:  data/TNM_stage_DELFI_4a.xlsx
-    Untracked:  data/TNM_stage_DELFI_4b.xlsx
-    Untracked:  data/all_sclc_vs_all_healthy_fragment_size.txt
-    Untracked:  data/all_sclc_vs_all_healthy_tfbs_coverage.txt
-    Untracked:  data/ascl1_rel_cov_10v10.txt
-    Untracked:  data/ascl1_tpm.txt
-    Untracked:  data/cristiano-GCLOESS-lucas-cov-z-mito-orig-delfi473.rds
-    Untracked:  data/cristiano-filtered-lucas2-cov-z-mito-gcloess-orig-delfi473.rds
-    Untracked:  data/cristiano2019_tableS7.csv
-    Untracked:  data/delfi_sensitivities.csv
-    Untracked:  data/fig5_data.xlsx
-    Untracked:  data/gc_correction.R/
-    Untracked:  data/ichor, fragm length DELFI.xlsx
-    Untracked:  data/id_subtype_key.txt
-    Untracked:  data/lucas-holdout-preds.csv
-    Untracked:  data/lucas_5mbs_delfi473.csv
-    Untracked:  data/median_lengths.R/
-    Untracked:  data/model_seq_glm.rds
-    Untracked:  data/pcr_experiment.rda
-    Untracked:  data/sclc_vs_other_fragment_size.txt
-    Untracked:  data/score.seq_fig3b_filtered.rds
-    Untracked:  data/sensitivity, specificity numbers in LUCAS_03_07_21.xlsx
-    Untracked:  data/stats.rds
-    Untracked:  data/ten_sample_rel_size.txt
-    Untracked:  data/testing-set.csv
-    Untracked:  data/tfbs_coverage.txt
-    Untracked:  data/tpm.txt
-    Untracked:  data/training-set.csv
-    Untracked:  data/validation_preds.csv
+    Untracked:  CITATION
+    Untracked:  temp.rds
 
 Unstaged changes:
-    Modified:   analysis/_site.yml
-    Modified:   analysis/index.Rmd
-    Modified:   analysis/license.Rmd
+    Modified:   .Rprofile
+    Modified:   README.Rmd
+    Modified:   code/model_code/predict-lucas_c1.r
+    Modified:   code/models_c1/model_full_lasso2.rds
+    Modified:   code/models_c1/model_seq_glm.rds
+    Modified:   data/delfi_sensitivities.csv
 
 </code></pre>
 <p>
-Note that any generated files, e.g. HTML, png, CSS, etc., are not included in this status report because it is ok for generated content to have uncommitted changes.
+Note that any generated files, e.g. HTML, png, CSS, etc., are not
+included in this status report because it is ok for generated content to
+have uncommitted changes.
 </p>
 </div>
 </div>
@@ -589,18 +619,128 @@ Note that any generated files, e.g. HTML, png, CSS, etc., are not included in t
 <hr>
 </div>
 <div id="versions" class="tab-pane fade">
+
 <p>
-There are no past versions. Publish this analysis with <code>wflow_publish()</code> to start tracking its development.
+These are the previous versions of the repository in which changes were
+made to the R Markdown (<code>analysis/fig6cdefg.Rmd</code>) and HTML
+(<code>docs/fig6cdefg.html</code>) files. If you’ve configured a remote
+Git repository (see <code>?wflow_git_remote</code>), click on the
+hyperlinks in the table below to view the files as they were in that
+past version.
 </p>
+<div class="table-responsive">
+<table class="table table-condensed table-hover">
+<thead>
+<tr>
+<th>
+File
+</th>
+<th>
+Version
+</th>
+<th>
+Author
+</th>
+<th>
+Date
+</th>
+<th>
+Message
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+Rmd
+</td>
+<td>
+<a href="https://github.com/cancer-genomics/reproduce_lucas_wflow/blob/d71c8acbbc76834c3ab0e5c686ed4b664b054ddf/analysis/fig6cdefg.Rmd" target="_blank">d71c8ac</a>
+</td>
+<td>
+rscharpf
+</td>
+<td>
+2024-03-01
+</td>
+<td>
+wflow_publish("analysis/*.Rmd")
+</td>
+</tr>
+<tr>
+<td>
+Rmd
+</td>
+<td>
+<a href="https://github.com/cancer-genomics/reproduce_lucas_wflow/blob/afb2c3af0e917b7d2079f2701d36a2eb30e68e5d/analysis/fig6cdefg.Rmd" target="_blank">afb2c3a</a>
+</td>
+<td>
+shay-279
+</td>
+<td>
+2021-08-19
+</td>
+<td>
+Mathios et. al.
+</td>
+</tr>
+<tr>
+<td>
+html
+</td>
+<td>
+<a href="https://rawcdn.githack.com/cancer-genomics/reproduce_lucas_wflow/afb2c3af0e917b7d2079f2701d36a2eb30e68e5d/docs/fig6cdefg.html" target="_blank">afb2c3a</a>
+</td>
+<td>
+shay-279
+</td>
+<td>
+2021-08-19
+</td>
+<td>
+Mathios et. al.
+</td>
+</tr>
+</tbody>
+</table>
+</div>
 <hr>
 </div>
 </div>
 </div>
+<pre class="r"><code>library(jcolors)
+library(ggplot2)
+library(magrittr)
+library(tidyverse)
+library(fs)
+library(grid)
+library(mvtnorm)
+library(readxl)
+library(kableExtra)
+library(scales)
+library(here)
+here(&quot;code&quot;, &quot;plot-roc.R&quot;) %&gt;%
+    source()</code></pre>
 <div id="modeling-delfi-and-ldct-screening" class="section level1">
 <h1>Modeling DELFI and LDCT screening</h1>
 <div id="performance-of-ldct" class="section level2">
 <h2>Performance of LDCT</h2>
-<pre><code># A tibble: 12 x 4
+<pre class="r"><code>perftheme1 &lt;- theme(panel.grid=element_blank(),
+                    plot.background=element_blank(),
+                   panel.border=element_blank(),
+                   panel.background=element_blank(),
+                   strip.background=element_rect(fill=&quot;white&quot;,
+                                                 color=&quot;white&quot;),
+                   axis.text.x=element_text(angle=0, hjust=0.5),
+                   axis.title.y=element_text(size=20),
+                   axis.line.y.left=element_line(color=&quot;black&quot;),
+                   axis.line.x.bottom=element_line(color=&quot;black&quot;),
+                   legend.position=&quot;bottom&quot;)</code></pre>
+<pre class="r"><code>screening_priors &lt;- read_excel(fname, sheet=1) %&gt;%
+    group_by(method, study, statistic) %&gt;%
+    nest()
+screening_priors</code></pre>
+<pre><code># A tibble: 12 × 4
 # Groups:   method, study, statistic [12]
    method          study statistic   data            
    &lt;chr&gt;           &lt;chr&gt; &lt;chr&gt;       &lt;list&gt;          
@@ -616,16 +756,68 @@ There are no past versions. Publish this analysis with <code>wflow_publish()</co
 10 DELFI,LDCT      LUCAS specificity &lt;tibble [2 × 3]&gt;
 11 DELFImulti,LDCT LUCAS sensitivity &lt;tibble [2 × 3]&gt;
 12 DELFImulti,LDCT LUCAS specificity &lt;tibble [2 × 3]&gt;</code></pre>
+<pre class="r"><code>##screening_priors$data
+inset_xlim &lt;- c(0.8, 1)</code></pre>
 <p>Weight sensitivity estimates by nlst</p>
-<pre><code>Warning: Missing column names filled in: &#39;X1&#39; [1]</code></pre>
-<pre><code>
-── Column specification ────────────────────────────────────────────────────────
-cols(
-  X1 = col_character(),
-  `DELFI, LDCT` = col_character(),
-  `DELFImulti, LDCT` = col_character(),
-  `Specificity cutoff` = col_character()
-)</code></pre>
+<pre class="r"><code>delfi &lt;- read_csv(here(&quot;data&quot;, &quot;delfi_sensitivities.csv&quot;),
+                  show_col_types=FALSE) %&gt;%
+    select(1:3) %&gt;%
+    set_colnames(c(&quot;group&quot;, &quot;dl&quot;, &quot;dml&quot;)) %&gt;%
+    mutate(dl=str_replace_all(dl, &quot;%&quot;, &quot;&quot;),
+           dml=str_replace_all(dml, &quot;%&quot;, &quot;&quot;),
+           dl=as.numeric(dl)/100,
+           dml=as.numeric(dml)/100)</code></pre>
+<pre><code>New names:
+• `` -&gt; `...1`</code></pre>
+<pre class="r"><code>delfi</code></pre>
+<pre><code># A tibble: 5 × 3
+  group               dl   dml
+  &lt;chr&gt;            &lt;dbl&gt; &lt;dbl&gt;
+1 Overall (n=129)   0.9   0.94
+2 Stage I (n=15)    0.8   0.87
+3 Stage II (n=7)    0.86  1   
+4 Stage III (n=35)  0.94  0.97
+5 Stage IV (n=72)   0.9   0.96</code></pre>
+<pre class="r"><code>delfi2  &lt;-  delfi %&gt;%
+    filter(grepl(&quot;Stage &quot;, group)) %&gt;%
+    mutate(stage=c(&quot;I&quot;, &quot;II&quot;, &quot;III&quot;, &quot;IV&quot;))
+delfi2</code></pre>
+<pre><code># A tibble: 4 × 4
+  group               dl   dml stage
+  &lt;chr&gt;            &lt;dbl&gt; &lt;dbl&gt; &lt;chr&gt;
+1 Stage I (n=15)    0.8   0.87 I    
+2 Stage II (n=7)    0.86  1    II   
+3 Stage III (n=35)  0.94  0.97 III  
+4 Stage IV (n=72)   0.9   0.96 IV   </code></pre>
+<pre class="r"><code>nlst &lt;- tibble(stage=c(&quot;I&quot;, &quot;II&quot;, &quot;III&quot;, &quot;IV&quot;),
+               prop=c(0.56, 0.07, 0.21, 0.16),
+               overall=284) %&gt;%
+    mutate(freq=round(prop*overall, 0)) %&gt;%
+    mutate(delfi_sensitivity=c())
+##weighted_average &lt;- (nlst$delfi_sensitivity * nlst$freq)/(sum(nlst$freq))
+delfi3 &lt;- delfi2 %&gt;%
+    left_join(select(nlst, stage, freq), by=&quot;stage&quot;) %&gt;%
+    mutate(dl=as.numeric(dl)*100,
+           dml=as.numeric(dml)*100) %&gt;%
+    mutate(dl_weighted=sum(dl*freq)/sum(freq),
+           dml_weighted=sum(dml*freq)/sum(freq))
+delfi3</code></pre>
+<pre><code># A tibble: 4 × 7
+  group               dl   dml stage  freq dl_weighted dml_weighted
+  &lt;chr&gt;            &lt;dbl&gt; &lt;dbl&gt; &lt;chr&gt; &lt;dbl&gt;       &lt;dbl&gt;        &lt;dbl&gt;
+1 Stage I (n=15)      80    87 I       159        85.0         91.5
+2 Stage II (n=7)      86   100 II       20        85.0         91.5
+3 Stage III (n=35)    94    97 III      60        85.0         91.5
+4 Stage IV (n=72)     90    96 IV       45        85.0         91.5</code></pre>
+<pre class="r"><code>delfi3 %&gt;%
+    select(group, dl, dml, stage, freq) %&gt;%
+    set_colnames(c(&quot;Stage&quot;,
+                   &quot;DELFI,LDCT&quot;,
+                   &quot;DELFImulti,LDCT&quot;,
+                   &quot;Stage&quot;,
+                   &quot;NLST Frequency&quot;)) %&gt;%
+    kbl() %&gt;%
+    kable_styling(full_width=FALSE)</code></pre>
 <table class="table" style="width: auto !important; margin-left: auto; margin-right: auto;">
 <thead>
 <tr>
@@ -652,10 +844,10 @@ NLST Frequency
 Stage I (n=15)
 </td>
 <td style="text-align:right;">
-0.80
+80
 </td>
 <td style="text-align:right;">
-0.87
+87
 </td>
 <td style="text-align:left;">
 I
@@ -669,10 +861,10 @@ I
 Stage II (n=7)
 </td>
 <td style="text-align:right;">
-0.86
+86
 </td>
 <td style="text-align:right;">
-1.00
+100
 </td>
 <td style="text-align:left;">
 II
@@ -686,10 +878,10 @@ II
 Stage III (n=35)
 </td>
 <td style="text-align:right;">
-0.94
+94
 </td>
 <td style="text-align:right;">
-0.97
+97
 </td>
 <td style="text-align:left;">
 III
@@ -703,10 +895,10 @@ III
 Stage IV (n=72)
 </td>
 <td style="text-align:right;">
-0.90
+90
 </td>
 <td style="text-align:right;">
-0.96
+96
 </td>
 <td style="text-align:left;">
 IV
@@ -717,8 +909,95 @@ IV
 </tr>
 </tbody>
 </table>
-<p>The overall sensitivity for DELFI,LDCT and DELFImulti,LDCT is an average of the sensitivity (<span class="math inline">\(se\)</span>) estimates in LUCAS weighted by the stage distribution of lung cancers in NLST: <span class="math inline">\(\sum_i \frac{se_i n_i}{N}\)</span> where <span class="math inline">\(N=284\)</span> and the frequencies of stage I-IV lung cancers in NLST are 159, 20, 60, and 45, respectively. The weighted sensitivity for DELFI,LDCT is 85.0 and the weighted sensitivity for DELFImulti,LDCT is 91.5.</p>
-<pre><code># A tibble: 4 x 6
+<p>The overall sensitivity for DELFI,LDCT and DELFImulti,LDCT is an
+average of the sensitivity (<span class="math inline">\(se\)</span>)
+estimates in LUCAS weighted by the stage distribution of lung cancers in
+NLST: <span class="math inline">\(\sum_i \frac{se_i n_i}{N}\)</span>
+where <span class="math inline">\(N=284\)</span> and the frequencies of
+stage I-IV lung cancers in NLST are 159, 20, 60, and 45, respectively.
+The weighted sensitivity for DELFI,LDCT is 8496.5 and the weighted
+sensitivity for DELFImulti,LDCT is 9145.4.</p>
+<pre class="r"><code>##
+## Equivalent to prior study with 100 observations
+##
+beta_params &lt;- unique(delfi3$dl_weighted) ##* 100
+beta_params &lt;- c(beta_params, 100-beta_params)
+
+beta_params2 &lt;- unique(delfi3$dml_weighted) ##* 100
+beta_params2 &lt;- c(beta_params2, 100-beta_params2)
+beta_params2</code></pre>
+<pre><code>[1] 91.454225  8.545775</code></pre>
+<pre class="r"><code>##bak &lt;- screening_priors
+sens &lt;- filter(screening_priors,
+               statistic==&quot;sensitivity&quot;)
+##    select(-predictive)
+spec &lt;- filter(screening_priors,
+               statistic==&quot;specificity&quot;) ##%&gt;%
+##    select(-predictive)
+
+sens2 &lt;- sens %&gt;%
+    unnest(&quot;data&quot;) %&gt;%
+    unite(id, c(method, parameter), sep=&quot;_&quot;, remove=FALSE) %&gt;%
+    mutate(value=case_when(id==&quot;DELFI,LDCT_shape1&quot; ~ beta_params[1],
+                           id==&quot;DELFI,LDCT_shape2&quot; ~ beta_params[2],
+                           id==&quot;DELFImulti,LDCT_shape1&quot; ~ beta_params2[1],
+                           id==&quot;DELFImulti,LDCT_shape2&quot; ~ beta_params2[2],
+                           TRUE ~ value)) %&gt;%
+    select(-id) %&gt;%
+    group_by(method, study, statistic) %&gt;%
+    nest()
+sens2$data</code></pre>
+<pre><code>[[1]]
+# A tibble: 5 × 3
+  parameter value distribution
+  &lt;chr&gt;     &lt;dbl&gt; &lt;chr&gt;       
+1 mu1       0.96  TN          
+2 mu2       0.94  TN          
+3 sd1       0.005 TN          
+4 sd2       0.02  TN          
+5 p         0.5   TN          
+
+[[2]]
+# A tibble: 2 × 3
+  parameter value distribution
+  &lt;chr&gt;     &lt;dbl&gt; &lt;chr&gt;       
+1 shape1     93.8 beta        
+2 shape2      6.2 beta        
+
+[[3]]
+# A tibble: 2 × 3
+  parameter value distribution
+  &lt;chr&gt;     &lt;dbl&gt; &lt;chr&gt;       
+1 shape1       86 beta        
+2 shape2       14 beta        
+
+[[4]]
+# A tibble: 2 × 3
+  parameter value distribution
+  &lt;chr&gt;     &lt;dbl&gt; &lt;chr&gt;       
+1 shape1       89 beta        
+2 shape2       11 beta        
+
+[[5]]
+# A tibble: 2 × 3
+  parameter value distribution
+  &lt;chr&gt;     &lt;dbl&gt; &lt;chr&gt;       
+1 shape1     85.0 beta        
+2 shape2     15.0 beta        
+
+[[6]]
+# A tibble: 2 × 3
+  parameter value distribution
+  &lt;chr&gt;     &lt;dbl&gt; &lt;chr&gt;       
+1 shape1    91.5  beta        
+2 shape2     8.55 beta        </code></pre>
+<pre class="r"><code>##bak=screening_priors
+screening_priors &lt;- bind_rows(sens2, spec)
+inset_xlim &lt;- c(0.7, 1)
+filter(screening_priors, method %in% c(&quot;DELFI,LDCT&quot;, &quot;DELFImulti,LDCT&quot;),
+       statistic==&quot;sensitivity&quot;) %&gt;%
+    unnest(data)</code></pre>
+<pre><code># A tibble: 4 × 6
 # Groups:   method, study, statistic [2]
   method          study statistic   parameter value distribution
   &lt;chr&gt;           &lt;chr&gt; &lt;chr&gt;       &lt;chr&gt;     &lt;dbl&gt; &lt;chr&gt;       
@@ -726,27 +1005,376 @@ IV
 2 DELFI,LDCT      LUCAS sensitivity shape2    15.0  beta        
 3 DELFImulti,LDCT LUCAS sensitivity shape1    91.5  beta        
 4 DELFImulti,LDCT LUCAS sensitivity shape2     8.55 beta        </code></pre>
-<pre><code>Scale for &#39;x&#39; is already present. Adding another scale for &#39;x&#39;, which will
-replace the existing scale.</code></pre>
-<pre><code>Scale for &#39;y&#39; is already present. Adding another scale for &#39;y&#39;, which will
-replace the existing scale.</code></pre>
+<pre class="r"><code>set.seed(12486814)
+screening_priors$predictive &lt;- screening_priors$data %&gt;%
+    map(function(x){
+        x &lt;- x %&gt;%
+            pivot_wider(names_from=parameter, values_from=value)
+        if(x$distribution==&quot;beta&quot;){
+            y &lt;- tibble(iter=seq_len(10e3),
+                        y=rbeta(10e3, x$shape1, x$shape2))
+            return(y)
+        }
+        ## Else: truncated normal (TN)
+        tibble(iter=seq_len(10e3),
+               y=c(pmin(rnorm(5000, x$mu1, x$sd1), 1),
+                   pmin(rnorm(5000, x$mu2, x$sd2), 1)))
+    })
+priors2 &lt;- select(screening_priors, method, study,
+                  statistic, predictive) %&gt;%
+    ##filter(method %in% c(&quot;LDCT&quot;, &quot;DELFI,LDCT&quot;, &quot;DELFImulti,LDCT&quot;)) %&gt;%
+    unnest(cols=predictive) %&gt;%
+    ungroup() %&gt;%
+    pivot_wider(id_cols=c(method, study, iter),
+                names_from=statistic, values_from=y) %&gt;%
+    unite(&quot;method_study&quot;, c(&quot;method&quot;, &quot;study&quot;), remove=FALSE, sep=&quot;,&quot;) %&gt;%
+    mutate(method_study=factor(method_study,
+                               levels=c(&quot;LDCT,LUCAS&quot;,
+                                        &quot;LDCT,NLST&quot;,
+                                        &quot;DELFI,LDCT,LUCAS&quot;,
+                                        &quot;DELFImulti,LDCT,LUCAS&quot;,
+                                        &quot;DELFI,LUCAS&quot;,
+                                        &quot;DELFImulti,LUCAS&quot;)))
+range(priors2$sensitivity)</code></pre>
+<pre><code>[1] 0.6704383 1.0000000</code></pre>
+<pre class="r"><code>summarize &lt;- dplyr::summarize
+medians &lt;- priors2 %&gt;%
+    group_by(method_study) %&gt;%
+    summarize(sensitivity=median(sensitivity),
+              specificity=median(specificity),
+              .groups=&quot;drop&quot;) %&gt;%
+    filter(method_study %in% method_study[1:4])
+method_labels &lt;- c(expression(LDCT[LUCAS]),
+                   expression(LDCT[NLST]),
+                   expression(&quot;DELFI,LDCT&quot;),
+                   expression(DELFI[multi]*&quot;,LDCT&quot;))
+
+study_levels &lt;- c(&quot;LDCT,LUCAS&quot;,
+                  &quot;LDCT,NLST&quot;,
+                  &quot;DELFI,LDCT,LUCAS&quot;,
+                  &quot;DELFImulti,LDCT,LUCAS&quot;)
+colors &lt;- jcolors(&quot;pal2&quot;)[c(1, 3:5)]
+colors &lt;- as.character(colors)
+names(colors) &lt;- study_levels</code></pre>
+<pre class="r"><code>figdata &lt;- priors2 %&gt;%
+    filter(method_study %in% medians$method_study) %&gt;%
+    mutate(method_study=droplevels(method_study),
+           method_study=factor(method_study,
+                               study_levels))
+fig &lt;- figdata %&gt;% ggplot(aes(sensitivity, specificity)) +
+    geom_density_2d(aes(color=method_study), bins=15) +
+    scale_color_manual(values=colors,
+                       labels=method_labels) +
+    scale_x_continuous(expand=c(0,0), limits=c(0,1)) +
+    scale_y_continuous(expand=c(0,0), limits=c(0,1)) +
+    theme_bw(base_size=20) +
+    geom_point(data=medians, size=2) +
+    perftheme1 +
+    guides(color=guide_legend(title=&quot;&quot;, override.aes=list(size=2), ncol=2)) +
+    xlab(&quot;Sensitivity&quot;) + ylab(&quot;Specificity&quot;)   +
+    theme(legend.text=element_text(hjust=0))
+inset_plot &lt;- fig + xlim(inset_xlim) + #ylim(c(0.4, 1)) +
+    scale_y_continuous(limits=c(0.4, 1), expand=c(0,0)) +
+    guides(color=FALSE) +
+    theme_bw(base_size=12) +
+    theme(panel.background=element_rect(fill=&quot;gray95&quot;),
+          panel.grid=element_blank())</code></pre>
+<pre><code>Scale for x is already present.
+Adding another scale for x, which will replace the existing scale.
+Scale for y is already present.
+Adding another scale for y, which will replace the existing scale.</code></pre>
+<pre><code>Warning: The `&lt;scale&gt;` argument of `guides()` cannot be `FALSE`. Use &quot;none&quot; instead as
+of ggplot2 3.3.4.
+This warning is displayed once every 8 hours.
+Call `lifecycle::last_lifecycle_warnings()` to see where this warning was
+generated.</code></pre>
+<pre class="r"><code>fig2 &lt;- fig + annotation_custom(grob=ggplotGrob(inset_plot),
+                        ymin=-0.00, ymax=0.7,
+                        xmin=-0.00, xmax=0.7)
+fig &lt;- fig2</code></pre>
+<pre class="r"><code>print(fig)</code></pre>
 <p><img src="figure/fig6cdefg.Rmd/prior_performance-1.png" width="960" style="display: block; margin: auto;" /></p>
+<p>
+<button type="button" class="btn btn-default btn-xs btn-workflowr btn-workflowr-fig" data-toggle="collapse" data-target="#fig-prior_performance-1">
+Past versions of prior_performance-1.png
+</button>
+</p>
+<div id="fig-prior_performance-1" class="collapse">
+<div class="table-responsive">
+<table class="table table-condensed table-hover">
+<thead>
+<tr>
+<th>
+Version
+</th>
+<th>
+Author
+</th>
+<th>
+Date
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<a href="https://github.com/cancer-genomics/reproduce_lucas_wflow/blob/afb2c3af0e917b7d2079f2701d36a2eb30e68e5d/docs/figure/fig6cdefg.Rmd/prior_performance-1.png" target="_blank">afb2c3a</a>
+</td>
+<td>
+shay-279
+</td>
+<td>
+2021-08-19
+</td>
+</tr>
+</tbody>
+</table>
 </div>
 </div>
-<div id="predictive-distribution-for-future-study" class="section level1">
+</div>
+</div>
+<div id="predictive-distribution-for-future-study"
+class="section level1">
 <h1>Predictive distribution for future study</h1>
-<p>In a future study of 100,000 participants, what is our predictive distribution for - number individuals screened - lung cancer individuals screened - number of LDCT scans - false positives leading to unnecessary follow-up procedures - individuals with lung cancer not identified ( false negatives ) - sensitivity in overall population</p>
-<p>Imagine that the size of the screening study is determined by the number of samples collected in a finite period of time such that studies with lower compliance have fewer participants.</p>
-<div id="performance-of-ldct-alone-and-delfildct" class="section level2">
+<p>In a future study of 100,000 participants, what is our predictive
+distribution for - number individuals screened - lung cancer individuals
+screened - number of LDCT scans - false positives leading to unnecessary
+follow-up procedures - individuals with lung cancer not identified (
+false negatives ) - sensitivity in overall population</p>
+<p>Imagine that the size of the screening study is determined by the
+number of samples collected in a finite period of time such that studies
+with lower compliance have fewer participants.</p>
+<div id="performance-of-ldct-alone-and-delfildct"
+class="section level2">
 <h2>Performance of LDCT alone and DELFI+LDCT</h2>
+<pre class="r"><code>set.seed(1496)
+adherence &lt;- read_excel(fname, sheet=2) %&gt;%
+    group_by(method, statistic) %&gt;%
+    nest()
+prev.params &lt;- read_excel(fname, sheet=3) %&gt;%
+    pivot_wider(names_from=parameter, values_from=value)
+prevalence &lt;- rbeta(10e3, prev.params$shape1, prev.params$shape2)
+
+sens_spec &lt;- priors2 %&gt;%
+    ungroup() %&gt;%
+    group_by(method_study, method) %&gt;%
+    nest()  %&gt;%
+    set_colnames(c(&quot;method_study&quot;, &quot;method&quot;, &quot;sens_spec&quot;))
+adherence$predictive  &lt;-
+    adherence$data %&gt;%
+    map(function(x){
+        x &lt;- x %&gt;%
+            pivot_wider(names_from=parameter, values_from=value)
+        y &lt;- rbeta(10e3, x$shape1, x$shape2)
+        return(y)
+    })
+adherence2 &lt;- adherence %&gt;%
+    ungroup() %&gt;%
+    select(method, predictive) %&gt;%
+    set_colnames(c(&quot;method&quot;, &quot;adherence&quot;))
+dat &lt;- left_join(sens_spec, adherence2, by=&quot;method&quot;)
+performance &lt;- function(x, y, prevalence){
+    montecarlo &lt;- tibble(sens=x$sensitivity,
+                         spec=x$specificity,
+                         compliance=y,
+                         prevalence=prevalence)
+    performance2(montecarlo)
+}
+dat$performance &lt;- dat$sens_spec %&gt;%
+    map2(dat$adherence, performance, prevalence=prevalence)
+predictive &lt;- dat %&gt;%
+    unnest(cols=&quot;performance&quot;) %&gt;%
+    ungroup() %&gt;%
+    select(method_study, ppv, fpr, tpr, acc, TP, number_screened)
+predictive2 &lt;- predictive %&gt;%
+    filter(method_study %in% medians$method_study) %&gt;%
+    mutate(method_study=droplevels(method_study))</code></pre>
 <p>create copy for later comparison</p>
+<pre class="r"><code>pred.bak &lt;- predictive2</code></pre>
 </div>
 <div id="prior-predictive-distributions" class="section level2">
 <h2>Prior predictive distributions</h2>
-<p>All of the figures here are made from the object <code>predictive2</code>.</p>
-<pre><code>Warning: Removed 1 rows containing non-finite values (stat_boxplot).</code></pre>
-<pre><code>Warning: Removed 73 rows containing non-finite values (stat_boxplot).</code></pre>
+<p>All of the figures here are made from the object
+<code>predictive2</code>.</p>
+<pre class="r"><code>perftheme &lt;- theme(panel.grid=element_blank(),
+                   plot.background=element_blank(),
+                   panel.border=element_blank(),
+                   panel.background=element_blank(),
+                   strip.background=element_rect(fill=&quot;white&quot;,
+                                                 color=&quot;white&quot;),
+                   axis.text.x=element_text(size=22),
+                   axis.title.y=element_text(size=20),
+                   axis.line.y.left=element_line(color=&quot;black&quot;),
+                   axis.line.x.bottom=element_line(color=&quot;black&quot;))
+method_labels &lt;- c(expression(LDCT[LUCAS]),
+                   expression(LDCT[NLST]),
+                   expression(&quot;DELFI,LDCT&quot;),
+                   expression(DELFI[multi]*&quot;,LDCT&quot;))
+names(method_labels) &lt;- medians$method_study
+axis_labels &lt;- c(expression(atop(NA, atop(LDCT[LUCAS], NA))),
+                 expression(atop(NA, atop(LDCT[NLST], NA))),
+                 expression(atop(NA, atop(&quot;DELFI,&quot;, &quot;LDCT&quot;))),
+                 expression(atop(NA, atop(DELFI[multi]*&quot;,&quot;, &quot;LDCT&quot;))))
+xscale &lt;- scale_x_discrete(breaks=names(method_labels),
+                           labels=axis_labels)
+ppvfig &lt;-
+    predictive2 %&gt;%
+    ggplot(aes(method_study, ppv)) +
+    geom_boxplot(aes(fill=method_study), alpha=0.3, width=0.3,
+                 outlier.shape=NA) +
+    scale_fill_manual(values=colors) +
+    theme_bw(base_size=24) +
+    perftheme +
+    ylab(&quot;Positive predictive value\n&quot;) + xlab(&quot;&quot;) +
+    xscale +
+    ylim(c(0, 0.15)) +
+    guides(fill=FALSE)
+ppvfig2 &lt;- ggplotGrob(ppvfig)</code></pre>
+<pre><code>Warning: Removed 1 row containing non-finite outside the scale range
+(`stat_boxplot()`).</code></pre>
+<pre class="r"><code>fprfig &lt;- predictive2 %&gt;%
+    ggplot(aes(method_study, fpr)) +
+    geom_boxplot(aes(fill=method_study),  alpha=0.3,
+                 width=0.3,
+                 outlier.shape=NA) +
+    scale_fill_manual(values=colors) +
+    theme_bw(base_size=24) +
+    perftheme +
+    ylab(&quot;Rate of unnecessary\nprocedures&quot;) + xlab(&quot;&quot;) +
+    xscale +
+    ylim(c(0, 1)) +
+    guides(fill=FALSE)
+fprfig2 &lt;- ggplotGrob(fprfig)
+fprfig2$widths &lt;- ppvfig2$widths
+
+
+accfig &lt;- predictive2 %&gt;%
+    ggplot(aes(method_study, acc)) +
+    geom_boxplot(aes(fill=method_study),  alpha=0.3,
+                 width=0.3,
+                 outlier.shape=NA) +
+    scale_fill_manual(values=colors) +
+    theme_bw(base_size=24) +
+    perftheme +
+    ylab(&quot;Accuracy\n&quot;) + xlab(&quot;&quot;) +
+    xscale +
+    ylim(c(0, 1)) +
+    guides(fill=FALSE)
+accfig2 &lt;- ggplotGrob(accfig)
+accfig2$widths &lt;- ppvfig2$widths
+
+tpfig &lt;-
+    predictive2 %&gt;%
+    ggplot(aes(method_study, TP)) +
+    geom_boxplot(aes(fill=method_study),  alpha=0.3,
+                 width=0.3,
+                 outlier.shape=NA) +
+    scale_y_log10(limits=c(10, 1200)) +
+    scale_fill_manual(values=colors) +
+    theme_bw(base_size=24) +
+    perftheme +
+    ylab(&quot;Number lung cancers detected\n&quot;) + xlab(&quot;&quot;) +
+    xscale +
+    guides(fill=FALSE)
+
+tpfig2 &lt;- ggplotGrob(tpfig)</code></pre>
+<pre><code>Warning: Removed 73 rows containing non-finite outside the scale range
+(`stat_boxplot()`).</code></pre>
+<pre class="r"><code>tpfig2$widths &lt;- ppvfig2$widths</code></pre>
+<pre class="r"><code>widths &lt;- c(0.35, 0.325, 0.325) %&gt;%
+    &quot;/&quot;(sum(.))
+heights &lt;- c(1, 1) %&gt;%
+    &quot;/&quot;(sum(.))
+gl &lt;- grid.layout(2, 3, widths=unit(widths, &quot;npc&quot;),
+                  heights=unit(heights, &quot;npc&quot;),
+                  just=c(&quot;left&quot;, &quot;bottom&quot;))</code></pre>
+<pre class="r"><code>grid.newpage()
+pushViewport(viewport(layout=gl))
+pushViewport(viewport(layout.pos.row=c(1, 2), layout.pos.col=1))
+pushViewport(viewport(height=unit(0.7, &quot;npc&quot;)))
+print(fig, newpage=FALSE)
+popViewport(2)
+pushViewport(viewport(layout.pos.row=1, layout.pos.col=2))
+grid.draw(tpfig2)
+popViewport()
+pushViewport(viewport(layout.pos.row=2, layout.pos.col=2))
+grid.draw(fprfig2)
+popViewport()
+pushViewport(viewport(layout.pos.row=1, layout.pos.col=3))
+grid.draw(accfig2)
+popViewport()
+pushViewport(viewport(layout.pos.row=2, layout.pos.col=3))
+grid.draw(ppvfig2)</code></pre>
 <p><img src="figure/fig6cdefg.Rmd/composite-1.png" width="1920" style="display: block; margin: auto;" /></p>
+<p>
+<button type="button" class="btn btn-default btn-xs btn-workflowr btn-workflowr-fig" data-toggle="collapse" data-target="#fig-composite-1">
+Past versions of composite-1.png
+</button>
+</p>
+<div id="fig-composite-1" class="collapse">
+<div class="table-responsive">
+<table class="table table-condensed table-hover">
+<thead>
+<tr>
+<th>
+Version
+</th>
+<th>
+Author
+</th>
+<th>
+Date
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<a href="https://github.com/cancer-genomics/reproduce_lucas_wflow/blob/afb2c3af0e917b7d2079f2701d36a2eb30e68e5d/docs/figure/fig6cdefg.Rmd/composite-1.png" target="_blank">afb2c3a</a>
+</td>
+<td>
+shay-279
+</td>
+<td>
+2021-08-19
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<pre class="r"><code>figname &lt;- file.path(&quot;docs/figure/fig5.Rmd/fig5.pdf&quot;)
+pdf(figname, width=20, height=10)
+grid.newpage()
+pushViewport(viewport(layout=gl))
+pushViewport(viewport(layout.pos.row=c(1, 2), layout.pos.col=1))
+pushViewport(viewport(height=unit(0.7, &quot;npc&quot;)))
+print(fig, newpage=FALSE)
+popViewport(2)
+pushViewport(viewport(layout.pos.row=1, layout.pos.col=2))
+grid.draw(tpfig2)
+popViewport()
+pushViewport(viewport(layout.pos.row=2, layout.pos.col=2))
+grid.draw(fprfig2)
+popViewport()
+pushViewport(viewport(layout.pos.row=1, layout.pos.col=3))
+grid.draw(accfig2)
+popViewport()
+pushViewport(viewport(layout.pos.row=2, layout.pos.col=3))
+grid.draw(ppvfig2)
+dev.off()</code></pre>
+<pre class="r"><code>predictive %&gt;%
+    pivot_longer(!method_study, names_to=&quot;statistic&quot;,
+                 values_to=&quot;value&quot;) %&gt;%
+    filter(statistic != &quot;ppv&quot;) %&gt;%
+    group_by(method_study, statistic) %&gt;%
+    summarize(`50%`=round(median(value), 2),
+              `2.5%`=round(quantile(value, 0.025), 2),
+              `97.5%`=round(quantile(value, .975), 2),
+              .groups=&quot;drop&quot;) %&gt;%
+    arrange(statistic) %&gt;%
+    kbl() %&gt;%
+    kable_paper(&quot;striped&quot;, full_width=FALSE)</code></pre>
 <table class=" lightable-paper lightable-striped" style="font-family: &quot;Arial Narrow&quot;, arial, helvetica, sans-serif; width: auto !important; margin-left: auto; margin-right: auto;">
 <thead>
 <tr>
@@ -768,6 +1396,108 @@ statistic
 </tr>
 </thead>
 <tbody>
+<tr>
+<td style="text-align:left;">
+LDCT,LUCAS
+</td>
+<td style="text-align:left;">
+TP
+</td>
+<td style="text-align:right;">
+47.00
+</td>
+<td style="text-align:right;">
+17.00
+</td>
+<td style="text-align:right;">
+108.00
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+LDCT,NLST
+</td>
+<td style="text-align:left;">
+TP
+</td>
+<td style="text-align:right;">
+47.00
+</td>
+<td style="text-align:right;">
+17.00
+</td>
+<td style="text-align:right;">
+106.00
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+DELFI,LDCT,LUCAS
+</td>
+<td style="text-align:left;">
+TP
+</td>
+<td style="text-align:right;">
+422.00
+</td>
+<td style="text-align:right;">
+185.00
+</td>
+<td style="text-align:right;">
+839.02
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+DELFImulti,LDCT,LUCAS
+</td>
+<td style="text-align:left;">
+TP
+</td>
+<td style="text-align:right;">
+450.00
+</td>
+<td style="text-align:right;">
+200.00
+</td>
+<td style="text-align:right;">
+887.00
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+DELFI,LUCAS
+</td>
+<td style="text-align:left;">
+TP
+</td>
+<td style="text-align:right;">
+426.00
+</td>
+<td style="text-align:right;">
+186.00
+</td>
+<td style="text-align:right;">
+846.00
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+DELFImulti,LUCAS
+</td>
+<td style="text-align:left;">
+TP
+</td>
+<td style="text-align:right;">
+439.00
+</td>
+<td style="text-align:right;">
+197.00
+</td>
+<td style="text-align:right;">
+870.02
+</td>
+</tr>
 <tr>
 <td style="text-align:left;">
 LDCT,LUCAS
@@ -1079,108 +1809,6 @@ number_screened
 LDCT,LUCAS
 </td>
 <td style="text-align:left;">
-TP
-</td>
-<td style="text-align:right;">
-47.00
-</td>
-<td style="text-align:right;">
-17.00
-</td>
-<td style="text-align:right;">
-108.00
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-LDCT,NLST
-</td>
-<td style="text-align:left;">
-TP
-</td>
-<td style="text-align:right;">
-47.00
-</td>
-<td style="text-align:right;">
-17.00
-</td>
-<td style="text-align:right;">
-106.00
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-DELFI,LDCT,LUCAS
-</td>
-<td style="text-align:left;">
-TP
-</td>
-<td style="text-align:right;">
-422.00
-</td>
-<td style="text-align:right;">
-185.00
-</td>
-<td style="text-align:right;">
-839.02
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-DELFImulti,LDCT,LUCAS
-</td>
-<td style="text-align:left;">
-TP
-</td>
-<td style="text-align:right;">
-450.00
-</td>
-<td style="text-align:right;">
-200.00
-</td>
-<td style="text-align:right;">
-887.00
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-DELFI,LUCAS
-</td>
-<td style="text-align:left;">
-TP
-</td>
-<td style="text-align:right;">
-426.00
-</td>
-<td style="text-align:right;">
-186.00
-</td>
-<td style="text-align:right;">
-846.00
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-DELFImulti,LUCAS
-</td>
-<td style="text-align:left;">
-TP
-</td>
-<td style="text-align:right;">
-439.00
-</td>
-<td style="text-align:right;">
-197.00
-</td>
-<td style="text-align:right;">
-870.02
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-LDCT,LUCAS
-</td>
-<td style="text-align:left;">
 tpr
 </td>
 <td style="text-align:right;">
@@ -1283,6 +1911,15 @@ tpr
 </div>
 <div id="positive-predictive-value" class="section level2">
 <h2>Positive predictive value</h2>
+<pre class="r"><code>ppv &lt;- predictive %&gt;%
+    group_by(method_study) %&gt;%
+    summarize(`50%`=round(median(ppv)*100, 2),
+              `2.5%`=round(quantile(ppv, 0.025)*100, 2),
+              `97.5%`=round(quantile(ppv, .975)*100, 2),
+              .groups=&quot;drop&quot;)
+ppv %&gt;%
+    kbl() %&gt;%
+    kable_paper(&quot;striped&quot;, full_width=FALSE)</code></pre>
 <table class=" lightable-paper lightable-striped" style="font-family: &quot;Arial Narrow&quot;, arial, helvetica, sans-serif; width: auto !important; margin-left: auto; margin-right: auto;">
 <thead>
 <tr>
@@ -1388,6 +2025,19 @@ DELFImulti,LUCAS
 </tbody>
 </table>
 <p>Percent improvement of PPV from LDCT,LUCAS</p>
+<pre class="r"><code>baseline &lt;- ppv[1, ] %&gt;%
+    pivot_longer(!method_study, names_to=&quot;percentile&quot;, values_to=&quot;ppv&quot;) %&gt;%
+    set_colnames(c(&quot;method_study&quot;, &quot;percentile&quot;, &quot;ppv_base&quot;)) %&gt;%
+    select(-method_study)
+ppv %&gt;%
+    filter(method_study != &quot;LDCT,LUCAS&quot;) %&gt;%
+    pivot_longer(!method_study, names_to=&quot;percentile&quot;, values_to=&quot;ppv&quot;) %&gt;%
+    left_join(baseline, by=&quot;percentile&quot;) %&gt;%
+    mutate(percent_change=round((ppv-ppv_base)/ppv_base * 100, 2)) %&gt;%
+    pivot_wider(id_cols=c(method_study),
+                names_from=percentile, values_from=percent_change) %&gt;%
+    kbl() %&gt;%
+    kable_paper(&quot;striped&quot;, full_width=FALSE)</code></pre>
 <table class=" lightable-paper lightable-striped" style="font-family: &quot;Arial Narrow&quot;, arial, helvetica, sans-serif; width: auto !important; margin-left: auto; margin-right: auto;">
 <thead>
 <tr>
@@ -1482,13 +2132,134 @@ DELFImulti,LUCAS
 </div>
 <div id="text-from-manuscript" class="section level1">
 <h1>Text from manuscript</h1>
-<p>To examine how our approach would perform for the overall detection of individuals with lung cancer at a population scale, we evaluated the DELFI model in a theoretical population of 100,000 high‐risk individuals using Monte Carlo simulations. Using the estimated sensitivities and specificities of LDCT alone or with DELFI as a prescreen in this hypothetical population, we modeled the uncertainty of these parameters using probability distributions centered at empirical estimates obtained from the NLST and/or LUCAS cohorts (Fig. 5b, Supplementary Table 8). The likely prevalence of lung cancer in this population using the NLST study estimate of 0.91% would be in 910 individuals (95% CI, 428-1584). Despite the recommendations for LDCT screening, adherence in the US is only 5.9%, resulting in an average of 5,979 tested individuals (95% CI, 3,176-9,658). As blood tests offer high accessibility and compliance, with adherence rates of 80‐90% reported for blood‐based biomarkers, we assumed that 80% (95 CI, 39-76%) of the lung cancer screening population would be tested using the combined approach. Monte Carlo simulations from these probability distributions revealed that LDCT alone detected an average of 51 individuals (95% CI, 17-108) with lung cancer (Fig. 5c). Using DELFI as a prescreen for LDCT, on average we would detect 394 additional lung cancer cases, or a 9‐fold increase (95% CI, 4.4-19.6-fold increase) compared to LDCT alone (Fig. 5c). The combined approach would not only substantially improve detection of lung cancer, but would be expected to increase the accuracy of the test, reduce the number of unnecessary procedures, and increase positive predictive value (PPV) from 1.9% (95% CI, 0.8-3.8%) for LDCT alone to 3.9% for DELFI and LDCT (95% CI, 1.8-7.9%, Fig. 5 d‐f). These analyses suggest a significant population‐wide benefit for combining a high‐sensitivity blood‐based early detection test with a subsequent diagnostic LDCT for detection of lung cancer.</p>
+<pre class="r"><code>prevalence_ci &lt;- quantile(prevalence, c(0.025, 0.975)) %&gt;%
+    &quot;*&quot;(100e3) %&gt;%
+    round(0) %&gt;%
+    paste(collapse=&quot;-&quot;)
+nscreened &lt;- predictive %&gt;%
+    filter(method_study==&quot;LDCT,LUCAS&quot;) %&gt;%
+    pull(number_screened) %&gt;%
+    mean() %&gt;%
+    round(0) %&gt;%
+    prettyNum(big.mark=&quot;,&quot;)
+nscreened_ci &lt;- predictive %&gt;%
+    filter(method_study==&quot;LDCT,LUCAS&quot;) %&gt;%
+    pull(number_screened) %&gt;%
+    quantile(c(0.025, 0.975)) %&gt;%
+    round(0) %&gt;%
+    prettyNum(big.mark=&quot;,&quot;) %&gt;%
+    paste(collapse=&quot;-&quot;)
+blood_adherence &lt;- adherence %&gt;%
+    filter(method==&quot;DELFI&quot;) %&gt;%
+    unnest(&quot;predictive&quot;) %&gt;%
+    summarize(mean=round(mean(predictive), 2),
+              `2.5%`=round(quantile(predictive, 0.025)*100),
+              `97.5%`=round(quantile(predictive, 0.975)*100),
+              .groups=&quot;drop&quot;)
+adherence_ci &lt;- paste(c(blood_adherence$`2.5%`,
+                        blood_adherence$`97.5%`), collapse=&quot;-&quot;) %&gt;%
+    paste0(&quot;%&quot;)
+ldct_tp &lt;- predictive %&gt;%
+    filter(method_study==&quot;LDCT,LUCAS&quot;) %&gt;%
+    summarize(mean=round(mean(TP), 0),
+              low=round(quantile(TP, 0.025), 0),
+              high=round(quantile(TP, 0.975), 0),
+              .groups=&quot;drop&quot;) %&gt;%
+    unite(&quot;ci&quot;, c(low, high), sep=&quot;-&quot;)
+
+delfi_ldct &lt;- predictive %&gt;%
+    filter(method_study==&quot;DELFI,LDCT,LUCAS&quot;) %&gt;%
+    summarize(mean=round(mean(TP), 0),
+              low=round(quantile(TP, 0.025), 0),
+              high=round(quantile(TP, 0.975), 0),
+              .groups=&quot;drop&quot;) %&gt;%
+    unite(&quot;ci&quot;, c(low, high), sep=&quot;-&quot;)
+addl_cases &lt;- delfi_ldct$mean-ldct_tp$mean
+fold_increase &lt;- predictive %&gt;%
+    select(method_study, TP) %&gt;%
+    filter(method_study %in% c(&quot;LDCT,LUCAS&quot;, &quot;DELFI,LDCT,LUCAS&quot;)) %&gt;%
+    mutate(simulation=rep(seq_len(10e3), 2)) %&gt;%
+    pivot_wider(names_from=method_study, values_from=TP) %&gt;%
+    mutate(fold_increase=`DELFI,LDCT,LUCAS`/`LDCT,LUCAS`) %&gt;%
+    summarize(mean=round(mean(fold_increase, 1)),
+              low=round(quantile(fold_increase, 0.025), 1),
+              high=round(quantile(fold_increase, 0.975), 1),
+              .groups=&quot;drop&quot;) %&gt;%
+    unite(&quot;ci&quot;, c(low, high), sep=&quot;-&quot;)
+## ppv
+ldct_alone &lt;- ppv %&gt;%
+    filter(method_study==&quot;LDCT,LUCAS&quot;) %&gt;%
+    pull(`50%`) %&gt;%
+    round(1) %&gt;%
+    sprintf(&quot;%.1f&quot;, .) %&gt;%
+    paste0(&quot;%&quot;)
+ldct_ci &lt;- ppv %&gt;%
+    filter(method_study==&quot;LDCT,LUCAS&quot;) %&gt;%
+    mutate(`2.5%`=round(`2.5%`, 1),
+           `2.5%`=sprintf(&quot;%.1f&quot;, `2.5%`),
+           `97.5%`=round(`97.5%`, 1),
+           `97.5%`=sprintf(&quot;%.1f&quot;, `97.5%`)) %&gt;%
+    unite(&quot;ci&quot;, c(`2.5%`, `97.5%`), sep=&quot;-&quot;) %&gt;%
+    pull(ci) %&gt;%
+    paste0(&quot;%&quot;)
+
+delfimulti_ldct &lt;- ppv %&gt;%
+    filter(method_study==&quot;DELFImulti,LDCT,LUCAS&quot;) %&gt;%
+    pull(`50%`) %&gt;%
+    round(1) %&gt;%
+    sprintf(&quot;%.1f&quot;, .) %&gt;%
+    paste0(&quot;%&quot;)
+delfimulti_ci &lt;- ppv %&gt;%
+    filter(method_study==&quot;DELFImulti,LDCT,LUCAS&quot;) %&gt;%
+    mutate(`2.5%`=round(`2.5%`, 1),
+           `2.5%`=sprintf(&quot;%.1f&quot;, `2.5%`),
+           `97.5%`=round(`97.5%`, 1),
+           `97.5%`=sprintf(&quot;%.1f&quot;, `97.5%`)) %&gt;%
+    unite(&quot;ci&quot;, c(`2.5%`, `97.5%`), sep=&quot;-&quot;) %&gt;%
+    pull(ci) %&gt;%
+    paste0(&quot;%&quot;)</code></pre>
+<p>To examine how our approach would perform for the overall detection
+of individuals with lung cancer at a population scale, we evaluated the
+DELFI model in a theoretical population of 100,000 high‐risk individuals
+using Monte Carlo simulations. Using the estimated sensitivities and
+specificities of LDCT alone or with DELFI as a prescreen in this
+hypothetical population, we modeled the uncertainty of these parameters
+using probability distributions centered at empirical estimates obtained
+from the NLST and/or LUCAS cohorts (Fig. 5b, Supplementary Table 8). The
+likely prevalence of lung cancer in this population using the NLST study
+estimate of 0.91% would be in 910 individuals (95% CI, 428-1584).
+Despite the recommendations for LDCT screening, adherence in the US is
+only 5.9%, resulting in an average of 5,979 tested individuals (95% CI,
+3,176-9,658). As blood tests offer high accessibility and compliance,
+with adherence rates of 80‐90% reported for blood‐based biomarkers, we
+assumed that 80% (95 CI, 39-76%) of the lung cancer screening population
+would be tested using the combined approach. Monte Carlo simulations
+from these probability distributions revealed that LDCT alone detected
+an average of 51 individuals (95% CI, 17-108) with lung cancer (Fig.
+5c). Using DELFI as a prescreen for LDCT, on average we would detect 394
+additional lung cancer cases, or a 9‐fold increase (95% CI,
+4.4-19.6-fold increase) compared to LDCT alone (Fig. 5c). The combined
+approach would not only substantially improve detection of lung cancer,
+but would be expected to increase the accuracy of the test, reduce the
+number of unnecessary procedures, and increase positive predictive value
+(PPV) from 1.9% (95% CI, 0.8-3.8%) for LDCT alone to 3.9% for DELFI and
+LDCT (95% CI, 1.8-7.9%, Fig. 5 d‐f). These analyses suggest a
+significant population‐wide benefit for combining a high‐sensitivity
+blood‐based early detection test with a subsequent diagnostic LDCT for
+detection of lung cancer.</p>
 </div>
 <div id="methods" class="section level1">
 <h1>Methods</h1>
-<div id="modelling-of-delfi-performance-in-a-screening-population" class="section level2">
+<div id="modelling-of-delfi-performance-in-a-screening-population"
+class="section level2">
 <h2>Modelling of DELFI performance in a screening population</h2>
-<p>To assess performance of LDCT alone and DELFI followed by LDCT in a hypothetical screening population of 100,000 individuals, we used Monte Carlo simulations to capture uncertainty of unknown parameters sensitivity, specificity, adherence, and lung cancer prevalence. Prior models of sensitivity for LUCAS alone were centered loosely on empirical estimates from the LUCAS and NLST cohorts: <span class="math display">\[\begin{align*}
+<p>To assess performance of LDCT alone and DELFI followed by LDCT in a
+hypothetical screening population of 100,000 individuals, we used Monte
+Carlo simulations to capture uncertainty of unknown parameters
+sensitivity, specificity, adherence, and lung cancer prevalence. Prior
+models of sensitivity for LUCAS alone were centered loosely on empirical
+estimates from the LUCAS and NLST cohorts: <span
+class="math display">\[\begin{align*}
 \theta_{1,M} &amp;\sim \left\{
 \begin{array}{ll}
 \pi \times \text{N}(0.96, 0.005) + (1-\pi) \times \text{N}(0.94, 0.02)
@@ -1498,8 +2269,10 @@ DELFImulti,LUCAS
 \text{Beta}(91, 9) &amp; M=\text{DELFI}_{\text{multi}}\text{,LDCT}.
 \end{array}
 \right.
-\end{align*}\]</span> We sampled <span class="math inline">\(\pi \sim \text{Bernoulli}(0.5)\)</span>.</p>
-<p>For specificity, prior models were <span class="math display">\[\begin{align*}
+\end{align*}\]</span> We sampled <span class="math inline">\(\pi \sim
+\text{Bernoulli}(0.5)\)</span>.</p>
+<p>For specificity, prior models were <span
+class="math display">\[\begin{align*}
 \theta_{2,M} &amp;\sim \left\{
 \begin{array}{ll}
 \text{Beta}(58, 42)&amp; M = \text{LDCT}_{\text{LUCAS}} \\
@@ -1509,61 +2282,96 @@ DELFImulti,LUCAS
 \end{array}
 \right.
 \end{align*}\]</span></p>
-<p>The number of individuals screened in our simulated screening study depends on adherence to screening guidelines. Letting <span class="math inline">\(n\)</span> denote the size of our screening study, our sampling model for <span class="math inline">\(n\)</span> is given by <span class="math display">\[\begin{align*}
+<p>The number of individuals screened in our simulated screening study
+depends on adherence to screening guidelines. Letting <span
+class="math inline">\(n\)</span> denote the size of our screening study,
+our sampling model for <span class="math inline">\(n\)</span> is given
+by <span class="math display">\[\begin{align*}
 n &amp;\sim \text{Binomial}(10^5, \eta) \\
 \eta &amp;\sim \text{beta}(\alpha_n, \beta_n).\\
-\end{align*}\]</span> For LDCT alone, shape parameters <span class="math inline">\(\alpha_n\)</span> and <span class="math inline">\(\beta_n\)</span> were 12 and 188 (<span class="citation">@ref</span>), while for DELFI <span class="math inline">\(\pm\)</span> CEA followed by LDCT shape parameters were 15 and 11 (<span class="citation">@ref</span> PSA compliance paper). Conditional on the size of our screening study and draws of <span class="math inline">\(\theta_{1,M}\)</span> and <span class="math inline">\(\theta_{2,M}\)</span> from their respective prior distributions, we sampled the disease status, <span class="math inline">\(y\)</span>, and screening results, <span class="math inline">\(x\)</span>, conditional on <span class="math inline">\(y\)</span>: <span class="math display">\[\begin{align*}
+\end{align*}\]</span> For LDCT alone, shape parameters <span
+class="math inline">\(\alpha_n\)</span> and <span
+class="math inline">\(\beta_n\)</span> were 12 and 188 (<span
+class="citation">@ref</span>), while for DELFI <span
+class="math inline">\(\pm\)</span> CEA followed by LDCT shape parameters
+were 15 and 11 (<span class="citation">@ref</span> PSA compliance
+paper). Conditional on the size of our screening study and draws of
+<span class="math inline">\(\theta_{1,M}\)</span> and <span
+class="math inline">\(\theta_{2,M}\)</span> from their respective prior
+distributions, we sampled the disease status, <span
+class="math inline">\(y\)</span>, and screening results, <span
+class="math inline">\(x\)</span>, conditional on <span
+class="math inline">\(y\)</span>: <span
+class="math display">\[\begin{align*}
 y_i &amp;\sim \text{Bernoulli}(\psi)~\text{for } i = 1, ..., n \\
 \psi &amp;\sim \text{Beta}(9.1, 990.9) \\
 x_i | \{y_i = 1, M\} &amp;\sim \text{Bernoulli}(\theta_{1,M}) \\
 x_i | \{y_i = 0, M\} &amp;\sim \text{Bernoulli}(1-\theta_{2,M}).
-\end{align*}\]</span> The informative prior for prevalence, <span class="math inline">\(\psi\)</span>, in our hypothetical population ensures that our screening study will be comprised predominantly of individuals without cancer, but allows the true prevalence to be smaller or larger than the estimate of 0.91% from <span class="citation">@study/population</span> (<span class="citation">@ref</span>). The number of lung cancers detected, accuracy, false positive rate, and positive predictive value were calculated from the joint distribution of <span class="math inline">\(\pmb{x}\)</span> and <span class="math inline">\(\pmb{y}\)</span>. We repeated the above sampling procedure 10,000 times, thereby obtaining predictive distributions for these statistics that reflect uncertainty of sensitivity, specificity, adherence, and prevalence.</p>
+\end{align*}\]</span> The informative prior for prevalence, <span
+class="math inline">\(\psi\)</span>, in our hypothetical population
+ensures that our screening study will be comprised predominantly of
+individuals without cancer, but allows the true prevalence to be smaller
+or larger than the estimate of 0.91% from <span
+class="citation">@study/population</span> (<span
+class="citation">@ref</span>). The number of lung cancers detected,
+accuracy, false positive rate, and positive predictive value were
+calculated from the joint distribution of <span
+class="math inline">\(\pmb{x}\)</span> and <span
+class="math inline">\(\pmb{y}\)</span>. We repeated the above sampling
+procedure 10,000 times, thereby obtaining predictive distributions for
+these statistics that reflect uncertainty of sensitivity, specificity,
+adherence, and prevalence.</p>
 <br>
 <p>
 <button type="button" class="btn btn-default btn-workflowr btn-workflowr-sessioninfo" data-toggle="collapse" data-target="#workflowr-sessioninfo" style="display: block;">
-<span class="glyphicon glyphicon-wrench" aria-hidden="true"></span> Session information
+<span class="glyphicon glyphicon-wrench" aria-hidden="true"></span>
+Session information
 </button>
 </p>
 <div id="workflowr-sessioninfo" class="collapse">
-<pre><code>R version 4.0.5 (2021-03-31)
-Platform: x86_64-apple-darwin17.0 (64-bit)
-Running under: macOS Catalina 10.15.7
+<pre class="r"><code>sessionInfo()</code></pre>
+<pre><code>R version 4.3.2 (2023-10-31)
+Platform: aarch64-apple-darwin20 (64-bit)
+Running under: macOS Sonoma 14.3.1
 
 Matrix products: default
-BLAS:   /Library/Frameworks/R.framework/Versions/4.0/Resources/lib/libRblas.dylib
-LAPACK: /Library/Frameworks/R.framework/Versions/4.0/Resources/lib/libRlapack.dylib
+BLAS:   /Library/Frameworks/R.framework/Versions/4.3-arm64/Resources/lib/libRblas.0.dylib 
+LAPACK: /Library/Frameworks/R.framework/Versions/4.3-arm64/Resources/lib/libRlapack.dylib;  LAPACK version 3.11.0
 
 locale:
 [1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
+
+time zone: America/New_York
+tzcode source: internal
 
 attached base packages:
 [1] grid      stats     graphics  grDevices utils     datasets  methods  
 [8] base     
 
 other attached packages:
- [1] here_1.0.1       kableExtra_1.3.4 readxl_1.3.1     mvtnorm_1.1-1   
- [5] fs_1.5.0         forcats_0.5.1    stringr_1.4.0    dplyr_1.0.6     
- [9] purrr_0.3.4      readr_1.4.0      tidyr_1.1.3      tibble_3.1.2    
-[13] tidyverse_1.3.1  magrittr_2.0.1   ggplot2_3.3.3    jcolors_0.0.4   
-[17] workflowr_1.6.2 
+ [1] here_1.0.1       scales_1.3.0     kableExtra_1.4.0 readxl_1.4.3    
+ [5] mvtnorm_1.2-4    fs_1.6.3         lubridate_1.9.3  forcats_1.0.0   
+ [9] stringr_1.5.1    dplyr_1.1.4      purrr_1.0.2      readr_2.1.5     
+[13] tidyr_1.3.1      tibble_3.2.1     tidyverse_2.0.0  magrittr_2.0.3  
+[17] ggplot2_3.5.0    jcolors_0.0.5    workflowr_1.7.1 
 
 loaded via a namespace (and not attached):
- [1] Rcpp_1.0.6        svglite_2.0.0     lubridate_1.7.10  ps_1.6.0         
- [5] assertthat_0.2.1  rprojroot_2.0.2   digest_0.6.27     utf8_1.2.1       
- [9] R6_2.5.0          cellranger_1.1.0  backports_1.2.1   reprex_2.0.0     
-[13] evaluate_0.14     highr_0.9         httr_1.4.2        pillar_1.6.1     
-[17] rlang_0.4.11      rstudioapi_0.13   jquerylib_0.1.4   rmarkdown_2.8    
-[21] labeling_0.4.2    webshot_0.5.2     munsell_0.5.0     broom_0.7.6      
-[25] compiler_4.0.5    httpuv_1.6.1      modelr_0.1.8      xfun_0.23        
-[29] systemfonts_1.0.2 pkgconfig_2.0.3   htmltools_0.5.1.1 tidyselect_1.1.1 
-[33] viridisLite_0.4.0 fansi_0.5.0       crayon_1.4.1      dbplyr_2.1.1     
-[37] withr_2.4.2       later_1.2.0       MASS_7.3-54       jsonlite_1.7.2   
-[41] gtable_0.3.0      lifecycle_1.0.0   DBI_1.1.1         git2r_0.28.0     
-[45] scales_1.1.1      cli_2.5.0         stringi_1.6.2     farver_2.1.0     
-[49] promises_1.2.0.1  xml2_1.3.2        bslib_0.2.5.1     ellipsis_0.3.2   
-[53] generics_0.1.0    vctrs_0.3.8       tools_4.0.5       glue_1.4.2       
-[57] hms_1.1.0         yaml_2.2.1        colorspace_2.0-1  isoband_0.2.4    
-[61] rvest_1.0.0       knitr_1.33        haven_2.4.1       sass_0.4.0       </code></pre>
+ [1] gtable_0.3.4      xfun_0.42         bslib_0.6.1       processx_3.8.3   
+ [5] callr_3.7.5       tzdb_0.4.0        vctrs_0.6.5       tools_4.3.2      
+ [9] ps_1.7.6          generics_0.1.3    parallel_4.3.2    fansi_1.0.6      
+[13] highr_0.10        pkgconfig_2.0.3   lifecycle_1.0.4   farver_2.1.1     
+[17] compiler_4.3.2    git2r_0.33.0      munsell_0.5.0     getPass_0.2-4    
+[21] httpuv_1.6.14     htmltools_0.5.7   sass_0.4.8        yaml_2.3.8       
+[25] crayon_1.5.2      later_1.3.2       pillar_1.9.0      jquerylib_0.1.4  
+[29] whisker_0.4.1     MASS_7.3-60.0.1   cachem_1.0.8      tidyselect_1.2.0 
+[33] digest_0.6.34     stringi_1.8.3     labeling_0.4.3    rprojroot_2.0.4  
+[37] fastmap_1.1.1     colorspace_2.1-0  cli_3.6.2         utf8_1.2.4       
+[41] withr_3.0.0       promises_1.2.1    bit64_4.0.5       timechange_0.3.0 
+[45] rmarkdown_2.25    httr_1.4.7        bit_4.0.5         cellranger_1.1.0 
+[49] hms_1.1.3         evaluate_0.23     knitr_1.45        viridisLite_0.4.2
+[53] rlang_1.1.3       isoband_0.2.7     Rcpp_1.0.12       glue_1.7.0       
+[57] xml2_1.3.6        vroom_1.6.5       svglite_2.1.3     rstudioapi_0.15.0
+[61] jsonlite_1.8.8    R6_2.5.1          systemfonts_1.0.5</code></pre>
 </div>
 </div>
 </div>
@@ -1571,7 +2379,7 @@ loaded via a namespace (and not attached):
 
 <!-- Adjust MathJax settings so that all math formulae are shown using
 TeX fonts only; see
-http://docs.mathjax.org/en/latest/configuration.html.  This will make
+https://docs.mathjax.org/en/latest/web/configuration.html. This will make
 the presentation more consistent at the cost of the webpage sometimes
 taking slightly longer to load. Note that this only works because the
 footer is added to webpages before the MathJax javascript. -->
@@ -1620,6 +2428,9 @@ $(document).ready(function () {
 
 <script>
 $(document).ready(function ()  {
+
+    // temporarily add toc-ignore selector to headers for the consistency with Pandoc
+    $('.unlisted.unnumbered').addClass('toc-ignore')
 
     // move toc-ignore selectors from section div to header
     $('div.section.toc-ignore')

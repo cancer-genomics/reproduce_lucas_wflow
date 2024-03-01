@@ -13,8 +13,8 @@
 
 <title>Relative coverage plot and ROC</title>
 
-<script src="site_libs/header-attrs-2.8/header-attrs.js"></script>
-<script src="site_libs/jquery-1.11.3/jquery.min.js"></script>
+<script src="site_libs/header-attrs-2.25/header-attrs.js"></script>
+<script src="site_libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link href="site_libs/bootstrap-3.3.5/css/cosmo.min.css" rel="stylesheet" />
 <script src="site_libs/bootstrap-3.3.5/js/bootstrap.min.js"></script>
@@ -29,17 +29,17 @@
        h6 {font-size: 12px;}
        code {color: inherit; background-color: rgba(0, 0, 0, 0.04);}
        pre:not([class]) { background-color: white }</style>
-<script src="site_libs/jqueryui-1.11.4/jquery-ui.min.js"></script>
+<script src="site_libs/jqueryui-1.13.2/jquery-ui.min.js"></script>
 <link href="site_libs/tocify-1.9.1/jquery.tocify.css" rel="stylesheet" />
 <script src="site_libs/tocify-1.9.1/jquery.tocify.js"></script>
 <script src="site_libs/navigation-1.1/tabsets.js"></script>
 <script src="site_libs/navigation-1.1/codefolding.js"></script>
 <link href="site_libs/highlightjs-9.12.0/textmate.css" rel="stylesheet" />
 <script src="site_libs/highlightjs-9.12.0/highlight.js"></script>
-<link href="site_libs/font-awesome-5.1.0/css/all.css" rel="stylesheet" />
-<link href="site_libs/font-awesome-5.1.0/css/v4-shims.css" rel="stylesheet" />
+<link href="site_libs/font-awesome-6.4.2/css/all.min.css" rel="stylesheet" />
+<link href="site_libs/font-awesome-6.4.2/css/v4-shims.min.css" rel="stylesheet" />
 
-<link rel="icon" href="https://github.com/workflowr/workflowr-assets/raw/master/img/reproducible.png">
+<link rel="icon" href="https://github.com/workflowr/workflowr-assets/raw/main/img/reproducible.png">
 <!-- Add a small amount of space between sections. -->
 <style type="text/css">
 div.section {
@@ -76,6 +76,7 @@ if (window.hljs) {
 
 
 
+
 <style type = "text/css">
 .main-container {
   max-width: 940px;
@@ -96,6 +97,9 @@ button.code-folding-btn:focus {
 }
 summary {
   display: list-item;
+}
+details > summary > p:only-child {
+  display: inline;
 }
 pre code {
   padding: 0;
@@ -153,11 +157,15 @@ $(document).ready(function () {
     href = "index.html";
   var menuAnchor = $('a[href="' + href + '"]');
 
-  // mark it active
-  menuAnchor.tab('show');
-
-  // if it's got a parent navbar menu mark it active as well
-  menuAnchor.closest('li.dropdown').addClass('active');
+  // mark the anchor link active (and if it's in a dropdown, also mark that active)
+  var dropdown = menuAnchor.closest('li.dropdown');
+  if (window.bootstrap) { // Bootstrap 4+
+    menuAnchor.addClass('active');
+    dropdown.find('> .dropdown-toggle').addClass('active');
+  } else { // Bootstrap 3
+    menuAnchor.parent().addClass('active');
+    dropdown.addClass('active');
+  }
 
   // Navbar adjustments
   var navHeight = $(".navbar").first().height() + 15;
@@ -186,8 +194,8 @@ $(document).ready(function () {
   border-radius: 4px;
 }
 
-.tabset-dropdown > .nav-tabs > li.active:before {
-  content: "";
+.tabset-dropdown > .nav-tabs > li.active:before, .tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "\e259";
   font-family: 'Glyphicons Halflings';
   display: inline-block;
   padding: 10px;
@@ -195,16 +203,9 @@ $(document).ready(function () {
 }
 
 .tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
-  content: "&#xe258;";
-  border: none;
-}
-
-.tabset-dropdown > .nav-tabs.nav-tabs-open:before {
-  content: "";
+  content: "\e258";
   font-family: 'Glyphicons Halflings';
-  display: inline-block;
-  padding: 10px;
-  border-right: 1px solid #ddd;
+  border: none;
 }
 
 .tabset-dropdown > .nav-tabs > li.active {
@@ -324,7 +325,7 @@ div.tocify {
 <div class="navbar navbar-default  navbar-fixed-top" role="navigation">
   <div class="container">
     <div class="navbar-header">
-      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-bs-toggle="collapse" data-target="#navbar" data-bs-target="#navbar">
         <span class="icon-bar"></span>
         <span class="icon-bar"></span>
         <span class="icon-bar"></span>
@@ -346,7 +347,7 @@ div.tocify {
       <ul class="nav navbar-nav navbar-right">
         <li>
   <a href="https://github.com/cancer-genomics/reproduce_lucas_wflow">
-    <span class="fas fa-github"></span>
+    <span class="fa fa-github"></span>
      
     Source code
   </a>
@@ -359,7 +360,7 @@ div.tocify {
 <div id="header">
 
 <div class="btn-group pull-right float-right">
-<button type="button" class="btn btn-default btn-xs btn-secondary btn-sm dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><span>Code</span> <span class="caret"></span></button>
+<button type="button" class="btn btn-default btn-xs btn-secondary btn-sm dropdown-toggle" data-toggle="dropdown" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><span>Code</span> <span class="caret"></span></button>
 <ul class="dropdown-menu dropdown-menu-right" style="min-width: 50px;">
 <li><a id="rmd-show-all-code" href="#">Show All Code</a></li>
 <li><a id="rmd-hide-all-code" href="#">Hide All Code</a></li>
@@ -375,7 +376,9 @@ div.tocify {
 
 <p>
 <button type="button" class="btn btn-default btn-workflowr btn-workflowr-report" data-toggle="collapse" data-target="#workflowr-report">
-<span class="glyphicon glyphicon-list" aria-hidden="true"></span> workflowr <span class="glyphicon glyphicon-exclamation-sign text-danger" aria-hidden="true"></span>
+<span class="glyphicon glyphicon-list" aria-hidden="true"></span>
+workflowr <span class="glyphicon glyphicon-exclamation-sign text-danger"
+aria-hidden="true"></span>
 </button>
 </p>
 <div id="workflowr-report" class="collapse">
@@ -384,7 +387,9 @@ div.tocify {
 <a data-toggle="tab" href="#summary">Summary</a>
 </li>
 <li>
-<a data-toggle="tab" href="#checks"> Checks <span class="glyphicon glyphicon-exclamation-sign text-danger" aria-hidden="true"></span> </a>
+<a data-toggle="tab" href="#checks"> Checks <span
+class="glyphicon glyphicon-exclamation-sign text-danger"
+aria-hidden="true"></span> </a>
 </li>
 <li>
 <a data-toggle="tab" href="#versions">Past versions</a>
@@ -393,17 +398,27 @@ div.tocify {
 <div class="tab-content">
 <div id="summary" class="tab-pane fade in active">
 <p>
-<strong>Last updated:</strong> 2021-08-19
+<strong>Last updated:</strong> 2024-03-01
 </p>
 <p>
-<strong>Checks:</strong> <span class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span> 6 <span class="glyphicon glyphicon-exclamation-sign text-danger" aria-hidden="true"></span> 1
+<strong>Checks:</strong> <span
+class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span> 6
+<span class="glyphicon glyphicon-exclamation-sign text-danger"
+aria-hidden="true"></span> 1
 </p>
 <p>
-<strong>Knit directory:</strong> <code>reproduce_lucas_wflow/</code> <span class="glyphicon glyphicon-question-sign" aria-hidden="true" title="This is the local directory in which the code in this file was executed."> </span>
+<strong>Knit directory:</strong> <code>reproduce_lucas_wflow/</code>
+<span class="glyphicon glyphicon-question-sign" aria-hidden="true"
+title="This is the local directory in which the code in this file was executed.">
+</span>
 </p>
 <p>
-This reproducible <a href="http://rmarkdown.rstudio.com">R Markdown</a> analysis was created with <a
-  href="https://github.com/jdblischak/workflowr">workflowr</a> (version 1.6.2). The <em>Checks</em> tab describes the reproducibility checks that were applied when the results were created. The <em>Past versions</em> tab lists the development history.
+This reproducible <a href="https://rmarkdown.rstudio.com">R Markdown</a>
+analysis was created with <a
+  href="https://github.com/workflowr/workflowr">workflowr</a> (version
+1.7.1). The <em>Checks</em> tab describes the reproducibility checks
+that were applied when the results were created. The <em>Past
+versions</em> tab lists the development history.
 </p>
 <hr>
 </div>
@@ -412,184 +427,198 @@ This reproducible <a href="http://rmarkdown.rstudio.com">R Markdown</a> analysis
 <div class="panel panel-default">
 <div class="panel-heading">
 <p class="panel-title">
-<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRMarkdownfilestronguncommittedchanges"> <span class="glyphicon glyphicon-exclamation-sign text-danger" aria-hidden="true"></span> <strong>R Markdown file:</strong> uncommitted changes </a>
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRMarkdownfilestronguptodate">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>R Markdown file:</strong> up-to-date
+</a>
 </p>
 </div>
-<div id="strongRMarkdownfilestronguncommittedchanges" class="panel-collapse collapse">
+<div id="strongRMarkdownfilestronguptodate"
+class="panel-collapse collapse">
 <div class="panel-body">
-<p>The R Markdown is untracked by Git. To know which version of the R Markdown file created these results, you’ll want to first commit it to the Git repo. If you’re still working on the analysis, you can ignore this warning. When you’re finished, you can run <code>wflow_publish</code> to commit the R Markdown file and build the HTML.</p>
+<p>Great! Since the R Markdown file has been committed to the Git
+repository, you know the exact version of the code that produced these
+results.</p>
 </div>
 </div>
 </div>
 <div class="panel panel-default">
 <div class="panel-heading">
 <p class="panel-title">
-<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongEnvironmentstrongempty"> <span class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span> <strong>Environment:</strong> empty </a>
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongEnvironmentstrongobjectspresent">
+<span class="glyphicon glyphicon-exclamation-sign text-danger"
+aria-hidden="true"></span> <strong>Environment:</strong> objects present
+</a>
 </p>
 </div>
-<div id="strongEnvironmentstrongempty" class="panel-collapse collapse">
+<div id="strongEnvironmentstrongobjectspresent"
+class="panel-collapse collapse">
 <div class="panel-body">
-<p>Great job! The global environment was empty. Objects defined in the global environment can affect the analysis in your R Markdown file in unknown ways. For reproduciblity it’s best to always run the code in an empty environment.</p>
+<p>
+The global environment had objects present when the code in the R
+Markdown file was run. These objects can affect the analysis in your R
+Markdown file in unknown ways. For reproduciblity it’s best to always
+run the code in an empty environment. Use <code>wflow_publish</code> or
+<code>wflow_build</code> to ensure that the code is always run in an
+empty environment.
+</p>
+<p>
+The following objects were defined in the global environment when these
+results were created:
+</p>
+<table class="table table-condensed table-hover">
+<thead>
+<tr>
+<th style="text-align:left;">
+Name
+</th>
+<th style="text-align:left;">
+Class
+</th>
+<th style="text-align:left;">
+Size
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+rv
+</td>
+<td style="text-align:left;">
+list
+</td>
+<td style="text-align:left;">
+2.9 Kb
+</td>
+</tr>
+</tbody>
+</table>
 </div>
 </div>
 </div>
 <div class="panel panel-default">
 <div class="panel-heading">
 <p class="panel-title">
-<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongSeedstrongcodesetseed20210819code"> <span class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span> <strong>Seed:</strong> <code>set.seed(20210819)</code> </a>
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongSeedstrongcodesetseed20210819code">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Seed:</strong>
+<code>set.seed(20210819)</code> </a>
 </p>
 </div>
-<div id="strongSeedstrongcodesetseed20210819code" class="panel-collapse collapse">
+<div id="strongSeedstrongcodesetseed20210819code"
+class="panel-collapse collapse">
 <div class="panel-body">
-<p>The command <code>set.seed(20210819)</code> was run prior to running the code in the R Markdown file. Setting a seed ensures that any results that rely on randomness, e.g. subsampling or permutations, are reproducible.</p>
+<p>The command <code>set.seed(20210819)</code> was run prior to running
+the code in the R Markdown file. Setting a seed ensures that any results
+that rely on randomness, e.g. subsampling or permutations, are
+reproducible.</p>
 </div>
 </div>
 </div>
 <div class="panel panel-default">
 <div class="panel-heading">
 <p class="panel-title">
-<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongSessioninformationstrongrecorded"> <span class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span> <strong>Session information:</strong> recorded </a>
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongSessioninformationstrongrecorded">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Session information:</strong>
+recorded </a>
 </p>
 </div>
-<div id="strongSessioninformationstrongrecorded" class="panel-collapse collapse">
+<div id="strongSessioninformationstrongrecorded"
+class="panel-collapse collapse">
 <div class="panel-body">
-<p>Great job! Recording the operating system, R version, and package versions is critical for reproducibility.</p>
+<p>Great job! Recording the operating system, R version, and package
+versions is critical for reproducibility.</p>
 </div>
 </div>
 </div>
 <div class="panel panel-default">
 <div class="panel-heading">
 <p class="panel-title">
-<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongCachestrongnone"> <span class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span> <strong>Cache:</strong> none </a>
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongCachestrongnone">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Cache:</strong> none </a>
 </p>
 </div>
 <div id="strongCachestrongnone" class="panel-collapse collapse">
 <div class="panel-body">
-<p>Nice! There were no cached chunks for this analysis, so you can be confident that you successfully produced the results during this run.</p>
+<p>Nice! There were no cached chunks for this analysis, so you can be
+confident that you successfully produced the results during this
+run.</p>
 </div>
 </div>
 </div>
 <div class="panel panel-default">
 <div class="panel-heading">
 <p class="panel-title">
-<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongFilepathsstrongrelative"> <span class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span> <strong>File paths:</strong> relative </a>
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongFilepathsstrongrelative">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>File paths:</strong> relative </a>
 </p>
 </div>
 <div id="strongFilepathsstrongrelative" class="panel-collapse collapse">
 <div class="panel-body">
-<p>Great job! Using relative paths to the files within your workflowr project makes it easier to run your code on other machines.</p>
+<p>Great job! Using relative paths to the files within your workflowr
+project makes it easier to run your code on other machines.</p>
 </div>
 </div>
 </div>
 <div class="panel panel-default">
 <div class="panel-heading">
 <p class="panel-title">
-<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrong4f74274"> <span class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span> <strong>Repository version:</strong> 4f74274 </a>
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomcancergenomicsreproducelucaswflowtreed71c8acbbc76834c3ab0e5c686ed4b664b054ddftargetblankd71c8aca">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Repository version:</strong>
+<a href="https://github.com/cancer-genomics/reproduce_lucas_wflow/tree/d71c8acbbc76834c3ab0e5c686ed4b664b054ddf" target="_blank">d71c8ac</a>
+</a>
 </p>
 </div>
-<div id="strongRepositoryversionstrong4f74274" class="panel-collapse collapse">
+<div
+id="strongRepositoryversionstrongahrefhttpsgithubcomcancergenomicsreproducelucaswflowtreed71c8acbbc76834c3ab0e5c686ed4b664b054ddftargetblankd71c8aca"
+class="panel-collapse collapse">
 <div class="panel-body">
 <p>
-Great! You are using Git for version control. Tracking code development and connecting the code version to the results is critical for reproducibility.
+Great! You are using Git for version control. Tracking code development
+and connecting the code version to the results is critical for
+reproducibility.
 </p>
 <p>
-The results in this page were generated with repository version 4f74274. See the <em>Past versions</em> tab to see a history of the changes made to the R Markdown and HTML files.
+The results in this page were generated with repository version
+<a href="https://github.com/cancer-genomics/reproduce_lucas_wflow/tree/d71c8acbbc76834c3ab0e5c686ed4b664b054ddf" target="_blank">d71c8ac</a>.
+See the <em>Past versions</em> tab to see a history of the changes made
+to the R Markdown and HTML files.
 </p>
 <p>
-Note that you need to be careful to ensure that all relevant files for the analysis have been committed to Git prior to generating the results (you can use <code>wflow_publish</code> or <code>wflow_git_commit</code>). workflowr only checks the R Markdown file, but you know if there are other scripts or data files that it depends on. Below is the status of the Git repository when the results were generated:
+Note that you need to be careful to ensure that all relevant files for
+the analysis have been committed to Git prior to generating the results
+(you can use <code>wflow_publish</code> or
+<code>wflow_git_commit</code>). workflowr only checks the R Markdown
+file, but you know if there are other scripts or data files that it
+depends on. Below is the status of the Git repository when the results
+were generated:
 </p>
 <pre><code>
 Ignored files:
-    Ignored:    analysis/.DS_Store
-    Ignored:    code/.DS_Store
-    Ignored:    data/.DS_Store
+    Ignored:    .Rhistory
 
 Untracked files:
-    Untracked:  LICENSE
-    Untracked:  README.Rmd
-    Untracked:  analysis/SessionInfo.Rmd
-    Untracked:  analysis/extended_fig10a.Rmd
-    Untracked:  analysis/extended_fig10ab.Rmd
-    Untracked:  analysis/extended_fig10cd.Rmd
-    Untracked:  analysis/extended_fig11.Rmd
-    Untracked:  analysis/extended_fig12.Rmd
-    Untracked:  analysis/extended_fig2ab.Rmd
-    Untracked:  analysis/extended_fig2c.Rmd
-    Untracked:  analysis/extended_fig3.Rmd
-    Untracked:  analysis/extended_fig4.Rmd
-    Untracked:  analysis/extended_fig5.Rmd
-    Untracked:  analysis/extended_fig6a.Rmd
-    Untracked:  analysis/extended_fig6b.Rmd
-    Untracked:  analysis/extended_fig6c.Rmd
-    Untracked:  analysis/extended_fig7.Rmd
-    Untracked:  analysis/extended_fig8.Rmd
-    Untracked:  analysis/extended_fig9.Rmd
-    Untracked:  analysis/fig2a.Rmd
-    Untracked:  analysis/fig2b.Rmd
-    Untracked:  analysis/fig2c.Rmd
-    Untracked:  analysis/fig2c_pt2.Rmd
-    Untracked:  analysis/fig3.Rmd
-    Untracked:  analysis/fig4ab.Rmd
-    Untracked:  analysis/fig4c.Rmd
-    Untracked:  analysis/fig5a.Rmd
-    Untracked:  analysis/fig5b.Rmd
-    Untracked:  analysis/fig5cdef.Rmd
-    Untracked:  analysis/fig6b.Rmd
-    Untracked:  analysis/fig6cdefg.Rmd
-    Untracked:  code/PlasmaTools.lucas/
-    Untracked:  code/model_code/
-    Untracked:  code/models_c1/
-    Untracked:  code/models_c2/
-    Untracked:  code/models_c3/
-    Untracked:  code/plot-roc.r
-    Untracked:  code/plot-roc_with_e9.r
-    Untracked:  code/prepare_tcga_plot_data.r
-    Untracked:  code/preprocessing/
-    Untracked:  code/rlucas/
-    Untracked:  code/rpcr/
-    Untracked:  data/Extended Data Fig.12_recurrence_analysis copy.xlsx
-    Untracked:  data/Extended Data Fig.12_recurrence_analysis.xlsx
-    Untracked:  data/LUCAS_metadata.xlsx
-    Untracked:  data/LUCAS_pts_50_80_py20_excluding prior cancers.xlsx
-    Untracked:  data/TCGA_Lung/
-    Untracked:  data/TNM_stage_DELFI_4a.xlsx
-    Untracked:  data/TNM_stage_DELFI_4b.xlsx
-    Untracked:  data/all_sclc_vs_all_healthy_fragment_size.txt
-    Untracked:  data/all_sclc_vs_all_healthy_tfbs_coverage.txt
-    Untracked:  data/ascl1_rel_cov_10v10.txt
-    Untracked:  data/ascl1_tpm.txt
-    Untracked:  data/cristiano-GCLOESS-lucas-cov-z-mito-orig-delfi473.rds
-    Untracked:  data/cristiano-filtered-lucas2-cov-z-mito-gcloess-orig-delfi473.rds
-    Untracked:  data/cristiano2019_tableS7.csv
-    Untracked:  data/delfi_sensitivities.csv
-    Untracked:  data/fig5_data.xlsx
-    Untracked:  data/gc_correction.R/
-    Untracked:  data/ichor, fragm length DELFI.xlsx
-    Untracked:  data/id_subtype_key.txt
-    Untracked:  data/lucas-holdout-preds.csv
-    Untracked:  data/lucas_5mbs_delfi473.csv
-    Untracked:  data/median_lengths.R/
-    Untracked:  data/model_seq_glm.rds
-    Untracked:  data/pcr_experiment.rda
-    Untracked:  data/sclc_vs_other_fragment_size.txt
-    Untracked:  data/score.seq_fig3b_filtered.rds
-    Untracked:  data/sensitivity, specificity numbers in LUCAS_03_07_21.xlsx
-    Untracked:  data/stats.rds
-    Untracked:  data/ten_sample_rel_size.txt
-    Untracked:  data/testing-set.csv
-    Untracked:  data/tfbs_coverage.txt
-    Untracked:  data/tpm.txt
-    Untracked:  data/training-set.csv
-    Untracked:  data/validation_preds.csv
+    Untracked:  CITATION
+    Untracked:  temp.rds
 
 Unstaged changes:
-    Modified:   analysis/_site.yml
-    Modified:   analysis/index.Rmd
-    Modified:   analysis/license.Rmd
+    Modified:   .Rprofile
+    Modified:   README.Rmd
+    Modified:   code/model_code/predict-lucas_c1.r
+    Modified:   code/models_c1/model_full_lasso2.rds
+    Modified:   code/models_c1/model_seq_glm.rds
+    Modified:   data/delfi_sensitivities.csv
 
 </code></pre>
 <p>
-Note that any generated files, e.g. HTML, png, CSS, etc., are not included in this status report because it is ok for generated content to have uncommitted changes.
+Note that any generated files, e.g. HTML, png, CSS, etc., are not
+included in this status report because it is ok for generated content to
+have uncommitted changes.
 </p>
 </div>
 </div>
@@ -598,69 +627,192 @@ Note that any generated files, e.g. HTML, png, CSS, etc., are not included in t
 <hr>
 </div>
 <div id="versions" class="tab-pane fade">
+
 <p>
-There are no past versions. Publish this analysis with <code>wflow_publish()</code> to start tracking its development.
+These are the previous versions of the repository in which changes were
+made to the R Markdown (<code>analysis/fig5cdef.Rmd</code>) and HTML
+(<code>docs/fig5cdef.html</code>) files. If you’ve configured a remote
+Git repository (see <code>?wflow_git_remote</code>), click on the
+hyperlinks in the table below to view the files as they were in that
+past version.
 </p>
+<div class="table-responsive">
+<table class="table table-condensed table-hover">
+<thead>
+<tr>
+<th>
+File
+</th>
+<th>
+Version
+</th>
+<th>
+Author
+</th>
+<th>
+Date
+</th>
+<th>
+Message
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+Rmd
+</td>
+<td>
+<a href="https://github.com/cancer-genomics/reproduce_lucas_wflow/blob/afb2c3af0e917b7d2079f2701d36a2eb30e68e5d/analysis/fig5cdef.Rmd" target="_blank">afb2c3a</a>
+</td>
+<td>
+shay-279
+</td>
+<td>
+2021-08-19
+</td>
+<td>
+Mathios et. al.
+</td>
+</tr>
+<tr>
+<td>
+html
+</td>
+<td>
+<a href="https://rawcdn.githack.com/cancer-genomics/reproduce_lucas_wflow/afb2c3af0e917b7d2079f2701d36a2eb30e68e5d/docs/fig5cdef.html" target="_blank">afb2c3a</a>
+</td>
+<td>
+shay-279
+</td>
+<td>
+2021-08-19
+</td>
+<td>
+Mathios et. al.
+</td>
+</tr>
+</tbody>
+</table>
+</div>
 <hr>
 </div>
 </div>
 </div>
+<pre><code>Warning: A numeric `legend.position` argument in `theme()` was deprecated in ggplot2
+3.5.0.
+ℹ Please use the `legend.position.inside` argument of `theme()` instead.
+This warning is displayed once every 8 hours.
+Call `lifecycle::last_lifecycle_warnings()` to see where this warning was
+generated.</code></pre>
 <pre><code>Setting levels: control = No cancer, case = SCLC</code></pre>
 <pre><code>Setting direction: controls &gt; cases</code></pre>
-<pre><code>Scale for &#39;colour&#39; is already present. Adding another scale for &#39;colour&#39;,
-which will replace the existing scale.</code></pre>
+<pre><code>Warning: Using `size` aesthetic for lines was deprecated in ggplot2 3.4.0.
+ℹ Please use `linewidth` instead.
+This warning is displayed once every 8 hours.
+Call `lifecycle::last_lifecycle_warnings()` to see where this warning was
+generated.</code></pre>
+<pre><code>Warning: The `legend.text.align` argument of `theme()` is deprecated as of ggplot2
+3.5.0.
+ℹ Please use theme(legend.text = element_text(hjust)) instead.
+This warning is displayed once every 8 hours.
+Call `lifecycle::last_lifecycle_warnings()` to see where this warning was
+generated.</code></pre>
+<pre><code>Scale for colour is already present.
+Adding another scale for colour, which will replace the existing scale.</code></pre>
 <pre><code>Setting levels: control = Other, case = SCLC</code></pre>
 <pre><code>Setting direction: controls &gt; cases</code></pre>
 <p><img src="figure/fig5cdef.Rmd/daniel_composite-1.png" width="1440" style="display: block; margin: auto;" /></p>
+<p>
+<button type="button" class="btn btn-default btn-xs btn-workflowr btn-workflowr-fig" data-toggle="collapse" data-target="#fig-daniel_composite-1">
+Past versions of daniel_composite-1.png
+</button>
+</p>
+<div id="fig-daniel_composite-1" class="collapse">
+<div class="table-responsive">
+<table class="table table-condensed table-hover">
+<thead>
+<tr>
+<th>
+Version
+</th>
+<th>
+Author
+</th>
+<th>
+Date
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<a href="https://github.com/cancer-genomics/reproduce_lucas_wflow/blob/afb2c3af0e917b7d2079f2701d36a2eb30e68e5d/docs/figure/fig5cdef.Rmd/daniel_composite-1.png" target="_blank">afb2c3a</a>
+</td>
+<td>
+shay-279
+</td>
+<td>
+2021-08-19
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
 <br>
 <p>
 <button type="button" class="btn btn-default btn-workflowr btn-workflowr-sessioninfo" data-toggle="collapse" data-target="#workflowr-sessioninfo" style="display: block;">
-<span class="glyphicon glyphicon-wrench" aria-hidden="true"></span> Session information
+<span class="glyphicon glyphicon-wrench" aria-hidden="true"></span>
+Session information
 </button>
 </p>
 <div id="workflowr-sessioninfo" class="collapse">
-<pre><code>R version 4.0.5 (2021-03-31)
-Platform: x86_64-apple-darwin17.0 (64-bit)
-Running under: macOS Catalina 10.15.7
+<pre><code>R version 4.3.2 (2023-10-31)
+Platform: aarch64-apple-darwin20 (64-bit)
+Running under: macOS Sonoma 14.3.1
 
 Matrix products: default
-BLAS:   /Library/Frameworks/R.framework/Versions/4.0/Resources/lib/libRblas.dylib
-LAPACK: /Library/Frameworks/R.framework/Versions/4.0/Resources/lib/libRlapack.dylib
+BLAS:   /Library/Frameworks/R.framework/Versions/4.3-arm64/Resources/lib/libRblas.0.dylib 
+LAPACK: /Library/Frameworks/R.framework/Versions/4.3-arm64/Resources/lib/libRlapack.dylib;  LAPACK version 3.11.0
 
 locale:
 [1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
+
+time zone: America/New_York
+tzcode source: internal
 
 attached base packages:
 [1] stats     graphics  grDevices utils     datasets  methods   base     
 
 other attached packages:
- [1] here_1.0.1      pROC_1.17.0.1   forcats_0.5.1   stringr_1.4.0  
- [5] purrr_0.3.4     readr_1.4.0     tidyr_1.1.3     tibble_3.1.2   
- [9] ggplot2_3.3.3   tidyverse_1.3.1 dplyr_1.0.6     workflowr_1.6.2
+ [1] here_1.0.1      pROC_1.18.5     lubridate_1.9.3 forcats_1.0.0  
+ [5] stringr_1.5.1   purrr_1.0.2     readr_2.1.5     tidyr_1.3.1    
+ [9] tibble_3.2.1    ggplot2_3.5.0   tidyverse_2.0.0 dplyr_1.1.4    
+[13] workflowr_1.7.1
 
 loaded via a namespace (and not attached):
- [1] Rcpp_1.0.6        lubridate_1.7.10  ps_1.6.0          assertthat_0.2.1 
- [5] rprojroot_2.0.2   digest_0.6.27     utf8_1.2.1        R6_2.5.0         
- [9] cellranger_1.1.0  plyr_1.8.6        backports_1.2.1   reprex_2.0.0     
-[13] evaluate_0.14     highr_0.9         httr_1.4.2        pillar_1.6.1     
-[17] rlang_0.4.11      readxl_1.3.1      rstudioapi_0.13   jquerylib_0.1.4  
-[21] rmarkdown_2.8     labeling_0.4.2    munsell_0.5.0     broom_0.7.6      
-[25] compiler_4.0.5    httpuv_1.6.1      modelr_0.1.8      xfun_0.23        
-[29] pkgconfig_2.0.3   htmltools_0.5.1.1 tidyselect_1.1.1  fansi_0.5.0      
-[33] crayon_1.4.1      dbplyr_2.1.1      withr_2.4.2       later_1.2.0      
-[37] grid_4.0.5        jsonlite_1.7.2    gtable_0.3.0      lifecycle_1.0.0  
-[41] DBI_1.1.1         git2r_0.28.0      magrittr_2.0.1    scales_1.1.1     
-[45] cli_2.5.0         stringi_1.6.2     farver_2.1.0      fs_1.5.0         
-[49] promises_1.2.0.1  xml2_1.3.2        bslib_0.2.5.1     ellipsis_0.3.2   
-[53] generics_0.1.0    vctrs_0.3.8       cowplot_1.1.1     tools_4.0.5      
-[57] glue_1.4.2        hms_1.1.0         yaml_2.2.1        colorspace_2.0-1 
-[61] rvest_1.0.0       knitr_1.33        haven_2.4.1       sass_0.4.0       </code></pre>
+ [1] sass_0.4.8        utf8_1.2.4        generics_0.1.3    stringi_1.8.3    
+ [5] hms_1.1.3         digest_0.6.34     magrittr_2.0.3    timechange_0.3.0 
+ [9] evaluate_0.23     grid_4.3.2        fastmap_1.1.1     plyr_1.8.9       
+[13] rprojroot_2.0.4   jsonlite_1.8.8    processx_3.8.3    whisker_0.4.1    
+[17] ps_1.7.6          promises_1.2.1    httr_1.4.7        fansi_1.0.6      
+[21] scales_1.3.0      jquerylib_0.1.4   cli_3.6.2         crayon_1.5.2     
+[25] rlang_1.1.3       cowplot_1.1.3     munsell_0.5.0     withr_3.0.0      
+[29] cachem_1.0.8      yaml_2.3.8        tools_4.3.2       tzdb_0.4.0       
+[33] colorspace_2.1-0  httpuv_1.6.14     vctrs_0.6.5       R6_2.5.1         
+[37] lifecycle_1.0.4   git2r_0.33.0      fs_1.6.3          pkgconfig_2.0.3  
+[41] callr_3.7.5       pillar_1.9.0      bslib_0.6.1       later_1.3.2      
+[45] gtable_0.3.4      glue_1.7.0        Rcpp_1.0.12       xfun_0.42        
+[49] tidyselect_1.2.0  highr_0.10        rstudioapi_0.15.0 knitr_1.45       
+[53] farver_2.1.1      htmltools_0.5.7   labeling_0.4.3    rmarkdown_2.25   
+[57] compiler_4.3.2    getPass_0.2-4    </code></pre>
 </div>
 
 
 <!-- Adjust MathJax settings so that all math formulae are shown using
 TeX fonts only; see
-http://docs.mathjax.org/en/latest/configuration.html.  This will make
+https://docs.mathjax.org/en/latest/web/configuration.html. This will make
 the presentation more consistent at the cost of the webpage sometimes
 taking slightly longer to load. Note that this only works because the
 footer is added to webpages before the MathJax javascript. -->
@@ -714,6 +866,9 @@ $(document).ready(function () {
 
 <script>
 $(document).ready(function ()  {
+
+    // temporarily add toc-ignore selector to headers for the consistency with Pandoc
+    $('.unlisted.unnumbered').addClass('toc-ignore')
 
     // move toc-ignore selectors from section div to header
     $('div.section.toc-ignore')
