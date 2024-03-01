@@ -2,14 +2,14 @@
 title: "Prior predictive distributions of DELFI and LDCT in screening"
 site: workflowr::wflow_site
 date: "`r format(Sys.time(), '%d %B, %Y')`"
-output: 
+output:
     html_document:
       code_folding: hide
 chunk_output_type: console
 ---
 
 ```{r caching, echo=FALSE}
-knitr::opts_chunk$set(autodep = TRUE, echo=FALSE)
+knitr::opts_chunk$set(autodep = TRUE)
 ```
 
 
@@ -23,6 +23,7 @@ library(grid)
 library(mvtnorm)
 library(readxl)
 library(kableExtra)
+library(scales)
 library(here)
 here("code", "plot-roc.R") %>%
     source()
@@ -64,16 +65,19 @@ inset_xlim <- c(0.8, 1)
 Weight sensitivity estimates by nlst
 
 ```{r weight}
-delfi <- read_csv(here("data", "delfi_sensitivities.csv")) %>%
+delfi <- read_csv(here("data", "delfi_sensitivities.csv"),
+                  show_col_types=FALSE) %>%
     select(1:3) %>%
     set_colnames(c("group", "dl", "dml")) %>%
     mutate(dl=str_replace_all(dl, "%", ""),
            dml=str_replace_all(dml, "%", ""),
            dl=as.numeric(dl)/100,
            dml=as.numeric(dml)/100)
+delfi
 delfi2  <-  delfi %>%
     filter(grepl("Stage ", group)) %>%
     mutate(stage=c("I", "II", "III", "IV"))
+delfi2
 nlst <- tibble(stage=c("I", "II", "III", "IV"),
                prop=c(0.56, 0.07, 0.21, 0.16),
                overall=284) %>%
@@ -82,8 +86,11 @@ nlst <- tibble(stage=c("I", "II", "III", "IV"),
 ##weighted_average <- (nlst$delfi_sensitivity * nlst$freq)/(sum(nlst$freq))
 delfi3 <- delfi2 %>%
     left_join(select(nlst, stage, freq), by="stage") %>%
+    mutate(dl=as.numeric(dl)*100,
+           dml=as.numeric(dml)*100) %>%
     mutate(dl_weighted=sum(dl*freq)/sum(freq),
            dml_weighted=sum(dml*freq)/sum(freq))
+delfi3
 ```
 
 
@@ -104,13 +111,14 @@ The overall sensitivity for DELFI,LDCT and DELFImulti,LDCT is an average of the 
 
 ```{r weight2}
 ##
-## Equivalent to prior study with 100 observations 
+## Equivalent to prior study with 100 observations
 ##
-beta_params <- unique(delfi3$dl_weighted) * 100
+beta_params <- unique(delfi3$dl_weighted) ##* 100
 beta_params <- c(beta_params, 100-beta_params)
 
-beta_params2 <- unique(delfi3$dml_weighted) * 100
+beta_params2 <- unique(delfi3$dml_weighted) ##* 100
 beta_params2 <- c(beta_params2, 100-beta_params2)
+beta_params2
 ##bak <- screening_priors
 sens <- filter(screening_priors,
                statistic=="sensitivity")
@@ -130,6 +138,7 @@ sens2 <- sens %>%
     select(-id) %>%
     group_by(method, study, statistic) %>%
     nest()
+sens2$data
 ##bak=screening_priors
 screening_priors <- bind_rows(sens2, spec)
 inset_xlim <- c(0.7, 1)
@@ -158,7 +167,8 @@ priors2 <- select(screening_priors, method, study,
                   statistic, predictive) %>%
     ##filter(method %in% c("LDCT", "DELFI,LDCT", "DELFImulti,LDCT")) %>%
     unnest(cols=predictive) %>%
-    pivot_wider(id_cols=c(method, study, iter, statistic, y),
+    ungroup() %>%
+    pivot_wider(id_cols=c(method, study, iter),
                 names_from=statistic, values_from=y) %>%
     unite("method_study", c("method", "study"), remove=FALSE, sep=",") %>%
     mutate(method_study=factor(method_study,
@@ -168,6 +178,8 @@ priors2 <- select(screening_priors, method, study,
                                         "DELFImulti,LDCT,LUCAS",
                                         "DELFI,LUCAS",
                                         "DELFImulti,LUCAS")))
+range(priors2$sensitivity)
+summarize <- dplyr::summarize
 medians <- priors2 %>%
     group_by(method_study) %>%
     summarize(sensitivity=median(sensitivity),
@@ -186,15 +198,17 @@ study_levels <- c("LDCT,LUCAS",
 colors <- jcolors("pal2")[c(1, 3:5)]
 colors <- as.character(colors)
 names(colors) <- study_levels
-fig <- priors2 %>%
+```
+
+```{r fig}
+figdata <- priors2 %>%
     filter(method_study %in% medians$method_study) %>%
     mutate(method_study=droplevels(method_study),
            method_study=factor(method_study,
-                               study_levels)) %>%
-    ggplot(aes(sensitivity, specificity)) +
-    geom_density_2d(aes(color=method_study), ##alpha=0.3,
-                    bins=15) +
-    scale_color_manual(values=colors, 
+                               study_levels))
+fig <- figdata %>% ggplot(aes(sensitivity, specificity)) +
+    geom_density_2d(aes(color=method_study), bins=15) +
+    scale_color_manual(values=colors,
                        labels=method_labels) +
     scale_x_continuous(expand=c(0,0), limits=c(0,1)) +
     scale_y_continuous(expand=c(0,0), limits=c(0,1)) +
@@ -206,7 +220,7 @@ fig <- priors2 %>%
     theme(legend.text=element_text(hjust=0))
 inset_plot <- fig + xlim(inset_xlim) + #ylim(c(0.4, 1)) +
     scale_y_continuous(limits=c(0.4, 1), expand=c(0,0)) +
-    guides(color=FALSE) + 
+    guides(color=FALSE) +
     theme_bw(base_size=12) +
     theme(panel.background=element_rect(fill="gray95"),
           panel.grid=element_blank())
@@ -223,7 +237,7 @@ print(fig)
 
 # Predictive distribution for future study
 
-In a future study of 100,000 participants, what is our predictive distribution for 
+In a future study of 100,000 participants, what is our predictive distribution for
 - number individuals screened
 - lung cancer individuals screened
 - number of LDCT scans
@@ -243,7 +257,7 @@ adherence <- read_excel(fname, sheet=2) %>%
 prev.params <- read_excel(fname, sheet=3) %>%
     pivot_wider(names_from=parameter, values_from=value)
 prevalence <- rbeta(10e3, prev.params$shape1, prev.params$shape2)
-    
+
 sens_spec <- priors2 %>%
     ungroup() %>%
     group_by(method_study, method) %>%
@@ -331,7 +345,7 @@ fprfig <- predictive2 %>%
     geom_boxplot(aes(fill=method_study),  alpha=0.3,
                  width=0.3,
                  outlier.shape=NA) +
-    scale_fill_manual(values=colors) +    
+    scale_fill_manual(values=colors) +
     theme_bw(base_size=24) +
     perftheme +
     ylab("Rate of unnecessary\nprocedures") + xlab("") +
@@ -347,7 +361,7 @@ accfig <- predictive2 %>%
     geom_boxplot(aes(fill=method_study),  alpha=0.3,
                  width=0.3,
                  outlier.shape=NA) +
-    scale_fill_manual(values=colors) +    
+    scale_fill_manual(values=colors) +
     theme_bw(base_size=24) +
     perftheme +
     ylab("Accuracy\n") + xlab("") +
@@ -364,12 +378,12 @@ tpfig <-
                  width=0.3,
                  outlier.shape=NA) +
     scale_y_log10(limits=c(10, 1200)) +
-    scale_fill_manual(values=colors) +    
+    scale_fill_manual(values=colors) +
     theme_bw(base_size=24) +
     perftheme +
     ylab("Number lung cancers detected\n") + xlab("") +
     xscale +
-    guides(fill=FALSE) 
+    guides(fill=FALSE)
 
 tpfig2 <- ggplotGrob(tpfig)
 tpfig2$widths <- ppvfig2$widths
@@ -452,10 +466,10 @@ ppv %>%
     pivot_longer(!method_study, names_to="percentile", values_to="ppv") %>%
     left_join(baseline, by="percentile") %>%
     mutate(percent_change=round((ppv-ppv_base)/ppv_base * 100, 2)) %>%
-    pivot_wider(id_cols=c(method_study, percentile, percent_change),
+    pivot_wider(id_cols=c(method_study),
                 names_from=percentile, values_from=percent_change) %>%
     kbl() %>%
-    kable_paper("striped", full_width=FALSE)    
+    kable_paper("striped", full_width=FALSE)
 ```
 
 # Text from manuscript
@@ -536,14 +550,14 @@ delfimulti_ldct <- ppv %>%
     filter(method_study=="DELFImulti,LDCT,LUCAS") %>%
     pull(`50%`) %>%
     round(1) %>%
-    sprintf("%.1f", .) %>%    
+    sprintf("%.1f", .) %>%
     paste0("%")
 delfimulti_ci <- ppv %>%
     filter(method_study=="DELFImulti,LDCT,LUCAS") %>%
     mutate(`2.5%`=round(`2.5%`, 1),
            `2.5%`=sprintf("%.1f", `2.5%`),
            `97.5%`=round(`97.5%`, 1),
-           `97.5%`=sprintf("%.1f", `97.5%`)) %>%    
+           `97.5%`=sprintf("%.1f", `97.5%`)) %>%
     unite("ci", c(`2.5%`, `97.5%`), sep="-") %>%
     pull(ci) %>%
     paste0("%")
@@ -556,7 +570,7 @@ To examine how our approach would perform for the overall detection of individua
 ## Modelling of DELFI performance in a screening population
 
 
-To assess performance of LDCT alone and DELFI followed by LDCT in a hypothetical screening population of 100,000 individuals, we used Monte Carlo simulations to capture uncertainty of unknown parameters sensitivity, specificity, adherence, and lung cancer prevalence.  Prior models of sensitivity for LUCAS alone were centered loosely on empirical estimates from the LUCAS and NLST cohorts: 
+To assess performance of LDCT alone and DELFI followed by LDCT in a hypothetical screening population of 100,000 individuals, we used Monte Carlo simulations to capture uncertainty of unknown parameters sensitivity, specificity, adherence, and lung cancer prevalence.  Prior models of sensitivity for LUCAS alone were centered loosely on empirical estimates from the LUCAS and NLST cohorts:
 \begin{align*}
 \theta_{1,M} &\sim \left\{
 \begin{array}{ll}
@@ -594,6 +608,6 @@ y_i &\sim \text{Bernoulli}(\psi)~\text{for } i = 1, ..., n \\
 x_i | \{y_i = 1, M\} &\sim \text{Bernoulli}(\theta_{1,M}) \\
 x_i | \{y_i = 0, M\} &\sim \text{Bernoulli}(1-\theta_{2,M}).
 \end{align*}
-The informative prior for prevalence, $\psi$, in our hypothetical population ensures that our screening study will be comprised predominantly of individuals without cancer, but allows the true prevalence to be smaller or larger than the estimate of 0.91% from @study/population (@ref). The number of lung cancers detected, accuracy, false positive rate, and positive predictive value were calculated from the joint distribution of $\pmb{x}$ and $\pmb{y}$.  We repeated the above sampling procedure 10,000 times, thereby obtaining predictive distributions for these statistics that reflect uncertainty of sensitivity, specificity, adherence, and prevalence. 
+The informative prior for prevalence, $\psi$, in our hypothetical population ensures that our screening study will be comprised predominantly of individuals without cancer, but allows the true prevalence to be smaller or larger than the estimate of 0.91% from @study/population (@ref). The number of lung cancers detected, accuracy, false positive rate, and positive predictive value were calculated from the joint distribution of $\pmb{x}$ and $\pmb{y}$.  We repeated the above sampling procedure 10,000 times, thereby obtaining predictive distributions for these statistics that reflect uncertainty of sensitivity, specificity, adherence, and prevalence.
 
 

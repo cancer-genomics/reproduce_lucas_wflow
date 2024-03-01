@@ -2,13 +2,13 @@
 title: "Extended data Figure 7"
 site: workflowr::wflow_site
 date: "`r format(Sys.time(), '%d %B, %Y')`"
-output: 
+output:
     html_document:
       code_folding: hide
 chunk_output_type: console
 ---
 
-    
+
 ```{r packages}
 library(tidyverse)
 library(magrittr)
@@ -21,7 +21,7 @@ data(metadata, package="rlucas")
 ```
 
 ```{r protein_scatter, fig.height=4, fig.width=15,dev=c("png", "pdf")}
-meta <- left_join(preds, meta, on="id")
+meta <- left_join(preds, meta, by="id")
 proteins <- meta %>% filter(assigned_group == 2) %>%
     select(score.seq, IL6,  CEA, CRP, YKL40) %>%
     pivot_longer(-score.seq,  names_to="Protein")
@@ -45,7 +45,7 @@ mytheme <- theme_bw(base_size=base_size)  +
 ggprotein <- ggplot(proteins, aes(value, score.seq)) + geom_point(size=1) +
     scale_x_continuous(trans='log10') +
     facet_grid(.~Protein, scales="free_x", space="fixed", switch="x") +
-    xlab("") + ylab(expression("DELFI score")) + 
+    xlab("") + ylab(expression("DELFI score")) +
     ylim(c(0, 1)) +
     geom_segment( x=-Inf, xend=-Inf, y=-Inf, yend=Inf, size=1.5) +
     geom_text(data=rhos, aes(label=label), size = 4.5, color="red",

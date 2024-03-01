@@ -17,25 +17,23 @@ library(plyr)
 library(gridExtra)
 library(grid)
 library(here)
+library(rlucas)
+here <- here::here
 load_all(here("code", "rlucas"))
-features <- read_csv(here("data", "training-set.csv"))
-#multinucs <- bins5mb %>% group_by(id) %>% summarize(multinucratio = sum(multinucs)/(sum(short+long)))
-#features <- inner_join(multinucs, features, by="id")
-
+features <- read_csv(here("data", "training-set.csv"),
+                     show_col_types=FALSE)
 labels <- meta %>% select(id, assigned_group)
 labels <- labels %>% filter(assigned_group != 1) %>%
     mutate(type = ifelse(assigned_group==2, "healthy", "cancer")) %>%
     select(-assigned_group)
-
 features <- inner_join(labels, features, by=c("id"="id"))
 features <- features  %>% select(-starts_with("cov_"))
-
-features <- features %>% mutate(clinical_smokingstatus=factor(clinical_smokingstatus,
-                                                              c("never", "former", "current")),
-                                clinical_COPD=as.integer(clinical_COPD))
-
-###
-model_seq <- readRDS(here("data", "model_seq_glm.rds"))
+features <- features %>%
+    mutate(clinical_smokingstatus=factor(clinical_smokingstatus,
+                                         c("never", "former",
+                                           "current")),
+           clinical_COPD=as.integer(clinical_COPD))
+model_seq <- readRDS(here("code", "models_c1", "model_seq_glm.rds"))
 
 model_seq$levels
 # [1] "cancer"  "healthy"
@@ -53,14 +51,21 @@ orig_coefs <- coef(model_seq$finalModel, s = model_seq$bestTune$lambda) * (-1)
 ```
 
 ```{r setup}
-
 pr <- prep(model_seq$recipe)
-model_input <- bake(pr, new_data = model_seq$trainingData)
+traindat <- model_seq$trainingData %>%
+    mutate(id=factor(id),
+           type=factor(type))
+model_input <- bake(pr, new_data = traindat)
+feature_means <- model_input  %>%
+    select(-c(id, type)) %>%
+    colMeans()
+feature_sds <- model_input %>%
+    select(-c(id, type)) %>%
+    as.data.frame() %>%
+    summarise_all(sd)
 
-feature_means <- model_input  %>% select(-c(id, type)) %>% colMeans()
-feature_sds <- model_input %>% select(-c(id, type)) %>% as.data.frame() %>% summarise_all(sd)
-
-feature_coefs <- data.frame(features = names(feature_sds), sd = as.numeric(feature_sds))
+feature_coefs <- data.frame(features = names(feature_sds),
+                            sd = as.numeric(feature_sds))
 feature_coefs <- merge(feature_coefs,
 	                   data.frame(features = rownames(orig_coefs),
 	                   	          orig_coefs = as.numeric(orig_coefs)),
@@ -69,15 +74,15 @@ feature_coefs$scaled_coefs <- feature_coefs$orig_coefs * feature_coefs$sd
 ```
 
 ```{r sample.set.annotation, echo=FALSE,dev=c("png", "pdf")}
-# PC heatmap-----------
-# extract the PC loadings
+## PC heatmap-----------
+##`` extract the PC loadings
+##tidy <- recipes:::tidy.recipe
 loadings <- data.frame(tidy(pr, number = 2))
 loadings <- dcast(loadings, terms ~ component, value.var = 'value')
 loadings$bin.id <- as.numeric(gsub('ratio_', '', loadings$terms))
 loadings <- loadings[with(loadings, order(bin.id)),]
 # only keep PC1 to PC11 given that these terms make the cut for the threshold
 loadings <- loadings[,c('terms', 'bin.id', sapply(seq(11), function(x) paste0('PC', x)))]
-
 
 # now work on visualization of the loadings
 pd <- loadings[,! colnames(loadings) %in% c('terms')]
